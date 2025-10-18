@@ -3,77 +3,89 @@ package eventos;
 import java.util.ArrayList;
 
 import java.util.List;
+import eventos.Evento;
 
 import excepciones.VenueOcupado;
 
 public class Venue {
 	
-	private String venueName;
-	private String ubicacion;
-	private int capacidadMax;
 	private String tipo;
-	private List <String> restriciones = new ArrayList <>();
-	private List <Evento> eventosEnVenue = new ArrayList <>();
+	private String ubicacion;
+	private int capacidadMaxima;
+	private List<String> restricciones;
+	private List<Evento> eventosAsociados;
 	
-	public Venue(String venueName, String ubicacion, int capacidadMax, String tipo, List<String> restriciones,
-			List<Evento> eventosEnVenue) {
-		super();
-		this.venueName = venueName;
-		this.ubicacion = ubicacion;
-		this.capacidadMax = capacidadMax;
+	
+	public Venue(String tipo, String ubicacion, int capacidadMaxima, List<String> restricciones) {
 		this.tipo = tipo;
-		this.restriciones = restriciones;
-		this.eventosEnVenue = eventosEnVenue;
+		this.ubicacion = ubicacion;
+		this.capacidadMaxima = capacidadMaxima;
+		if (restricciones == null) {
+			this.restricciones = new ArrayList<>();
+		} else {
+			this.restricciones = restricciones;
+		}
+		
+		this.eventosAsociados = new ArrayList<>();
 	}
-
-	public String getVenueName() {
-		return venueName;
+	
+	public void programarEvento(Evento nuevoEvento, String fechaEvento) throws VenueOcupado {
+		
+		if (verificarDisponibilidad(fechaEvento) == false) {
+			throw new VenueOcupado("Reservaron antes que tu este venue para el dia: "+ fechaEvento + ", metele ganas viejo");
+		}
+		
+		this.eventosAsociados.add(nuevoEvento);
+		
+		
 	}
-
-	public String getUbicacion() {
-		return ubicacion;
-	}
-
-	public int getCapacidadMax() {
-		return capacidadMax;
+	
+	
+	
+	
+	public boolean verificarDisponibilidad(String fechaEvento) {
+		boolean cumple = true;
+		for (Evento e: eventosAsociados) {
+			if(e.getFecha().equals(fechaEvento)) {
+				cumple = false;
+			}
+		}
+		
+		return cumple;
+		
 	}
 
 	public String getTipo() {
 		return tipo;
 	}
 
-	public List<String> getRestriciones() {
-		return restriciones;
+	public String getUbicacion() {
+		return ubicacion;
 	}
 
-	public List<Evento> getEventosEnVenue() {
-		return eventosEnVenue;
+	public int getCapacidadMaxima() {
+		return capacidadMaxima;
 	}
 
-	
-	
-	public void agregarEventoAlVenue ( Evento e ) {
-		
-	
-		eventosEnVenue.add(e);
-		
+	public List<String> getRestricciones() {
+		return restricciones;
+	}
+
+	public List<Evento> getEventosAsociados() {
+		return eventosAsociados;
 	}
 	
-	public String verificarDisponibilidadVenue (Evento e, ArrayList<Evento> n ) throws VenueOcupado{
-		
-		for (Evento x: n) {
-			
-			if (x.fecha.equals(e.fecha)) {
-			
-			throw new VenueOcupado(e.Venue.getVenueName);
-			}
-			
-			else 
-			
-		}
+	
+	
+	
+	
+	
+	
+	
+	
 		
 		
-		
+
 		
 		
 		
@@ -83,4 +95,4 @@ public class Venue {
 	
 	
 
-}
+
