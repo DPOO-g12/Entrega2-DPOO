@@ -2,7 +2,10 @@ package cliente;
 import java.util.Map;
 import java.util.HashMap;
 import eventos.Evento;
+import eventos.Venue;
+import localidades.Localidades;
 import tiquetes.Tiquete;
+import java.util.List;
 
 
 public class Administrador extends Usuario {
@@ -46,13 +49,25 @@ public class Administrador extends Usuario {
 		
 	}
 	
+	public Venue crearVenue(String tipo, String ubicacion, int capacidadMaxima, List<String> restricciones) {
+	    
+	    Venue nuevoVenue = new Venue( tipo, ubicacion, capacidadMaxima, restricciones, "APROBADO");
+	    return nuevoVenue; 
+	}
+	
+	public void aprobarVenue(Venue venue) {
+	    venue.setEstado("APROBADO"); 
+	}
+	
+	public void rechazarVenue(Venue venue) {
+	    venue.setEstado("PENDIENTE");
+	}
 	
 	
-	// no  implementa 
+	// no  implementa mala practica pero me chupa un guevo 
 	@Override
-	public void comprarTiquete(Evento evento, int Cantidad) {
-		 
-	
+	public void comprarTiquete(Localidades localidad, int cantidad, double porcentajeServicio, double cobroEmision ) throws Exception {
+
 	}
 
 	@Override
@@ -61,7 +76,8 @@ public class Administrador extends Usuario {
 		
 	}
 
-		
+	
+	
 	
 	
 	

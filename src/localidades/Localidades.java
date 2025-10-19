@@ -1,6 +1,7 @@
 package localidades;
 import eventos.Oferta;
 import java.util.List;
+import eventos.Evento;
 
 
 public abstract class Localidades {
@@ -8,12 +9,14 @@ public abstract class Localidades {
 	private int capacidadMax; 
 	private String nombreLocalidad;
 	private Oferta oferta;
+	private Evento evento;
 	
-	public Localidades(double precio, int capacidadMax, String nombreLocalidad, Oferta oferta) {
+	public Localidades(double precio, int capacidadMax, String nombreLocalidad, Oferta oferta, Evento evento) {
 		this.precio = precio;
 		this.capacidadMax = capacidadMax;
 		this.nombreLocalidad = nombreLocalidad;
 		this.oferta = oferta;
+		this.evento = evento;
 	}
 	
 	public abstract boolean verificarDisponibilidad(int cantidad);
@@ -22,13 +25,16 @@ public abstract class Localidades {
 	
 	
 	public double getPrecioFinal() {
-		double finaal = 0.0;
-		if (this.oferta != null && this.oferta.isOfertaValida()) {
-			finaal = this.oferta.getDescuento();	
-		}
-			
-		
-		return Math.max(0.0, this.precio - finaal);
+	    if (this.oferta == null || !this.oferta.isOfertaValida()) {
+	        return this.precio;
+	    }
+
+	    double porcentajeDescuento = this.oferta.getDescuento(); 
+
+	    double precioConDescuento = this.precio * (1.0 - porcentajeDescuento);
+
+	    // Math.max para que el valor no sea negativo de el precioFinal por la resta.
+	    return Math.max(0.0, precioConDescuento); 
 	}
 	
 
@@ -46,6 +52,10 @@ public abstract class Localidades {
 
 	public Oferta getOferta() {
 		return oferta;
+	}
+	
+	public Evento getEvento() {
+	    return evento;
 	}
 	
 	

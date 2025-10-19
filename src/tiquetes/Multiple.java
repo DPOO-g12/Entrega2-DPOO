@@ -1,8 +1,9 @@
 package tiquetes;
 import java.util.List;
-import cliente.UsuarioComprador;
+import cliente.Usuario;
 import eventos.Evento;
 import java.util.ArrayList;
+import excepciones.TiqueteNoTransferibleException;
 
 public class Multiple extends Tiquete  {
 	
@@ -11,7 +12,7 @@ public class Multiple extends Tiquete  {
 	private List<Evento> eventosAsociados;
 
 	public Multiple(double precioTotalPaquete, String fecha,
-			UsuarioComprador cliente, String estado,
+			Usuario cliente, String estado,
 			List<Tiquete> tiquetesIncluidos, List<Evento> eventosAsociados ) {
 		
 		
@@ -39,17 +40,31 @@ public class Multiple extends Tiquete  {
 		return "MULTIPLE";
 	}
 	
-	@Override
-	public void transferirTiquete(UsuarioComprador nuevoCliente) {
-		
-		super.transferirTiquete(nuevoCliente);
-		
-		for(Tiquete t: tiquetesIncluidos) {
-			t.transferirTiquete(nuevoCliente);
-		}
-		System.out.println("El tiquete ha sido transferido al igual que sus otros " + tiquetesIncluidos.size() + " tiquetes. "
-				+ "Gracias");
 	
+	@Override
+	public void transferirTiquete(Usuario nuevoCliente) throws TiqueteNoTransferibleException {
+	    
+	   
+	    for (Tiquete t : this.tiquetesIncluidos) {
+	        String estadoHijo = t.getEstado();
+	        if (estadoHijo.equals("VENCIDO") || estadoHijo.equals("TRANSFERIDO")) {
+	            
+	           
+	            throw new TiqueteNoTransferibleException("No se puede transferir el paquete: " 
+	                + "El tiquete interno " + t.getIdTiquete() + " ya fue vencido o transferido.");
+	        }
+	    }
+
+	    super.transferirTiquete(nuevoCliente);
+	    
+	    for (Tiquete t : tiquetesIncluidos) {
+	        try {
+	            t.transferirTiquete(nuevoCliente); 
+	        } catch (TiqueteNoTransferibleException e) {
+	     
+	            System.err.println("Error inesperado al transferir tiquete crack: " + e.getMessage());
+	        }
+	    }
 	}
 
 
@@ -61,6 +76,7 @@ public class Multiple extends Tiquete  {
 	public List<Evento> getEventosAsociados() {
 		return eventosAsociados;
 	}
+	
 	
 	
 	

@@ -3,7 +3,9 @@ import java.util.Map;
 import java.util.HashMap;
 import localidades.Localidades;
 import excepciones.VenueOcupado;
-
+import cliente.OrganizadorEventos;
+import localidades.NoNumerada;
+import localidades.Numerada;
 public class Evento {
 	
 	
@@ -12,13 +14,15 @@ public class Evento {
 	private String fecha;
 	private Venue venue;
 	private Map<String, Localidades> localidades;
+	private OrganizadorEventos promotor;
 	
-	public Evento(String id, String nombre, String fecha, Venue venue) throws VenueOcupado {
+	public Evento(String id, String nombre, String fecha, Venue venue, OrganizadorEventos promotor) throws VenueOcupado {
 		super();
 		this.id = id;
 		this.nombre = nombre;
 		this.fecha = fecha;
 		this.venue = venue;
+		this.promotor = promotor;
 		this.localidades = new HashMap<String, Localidades>();
 		
 		venue.programarEvento(this, fecha);
@@ -27,9 +31,14 @@ public class Evento {
 		
 	
 	
-	public void agregarLocalidades(String nombre, Localidades localidad) {
-		localidades.put(nombre, localidad);
+	public void agregarLocalidadNumerada(String nombre, double precio, int capacidad, Map<String, Boolean> asientos) {
+	    Numerada nueva = new Numerada(precio, capacidad, nombre, null, this, asientos);
+	    this.localidades.put(nombre, nueva);
+	}
 
+	public void agregarLocalidadNoNumerada(String nombre, double precio, int capacidad) {
+	    NoNumerada nueva = new NoNumerada(precio, capacidad, nombre, null, this);
+	    this.localidades.put(nombre, nueva);
 	}
 
 	public String getId() {
@@ -52,6 +61,9 @@ public class Evento {
 		return localidades;
 	}
 	
+	public OrganizadorEventos getPromotor() {
+		return promotor;
+	}
 	
 	
 	

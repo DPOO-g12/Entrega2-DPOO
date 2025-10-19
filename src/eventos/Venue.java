@@ -14,9 +14,10 @@ public class Venue {
 	private int capacidadMaxima;
 	private List<String> restricciones;
 	private List<Evento> eventosAsociados;
+	private String estado;
 	
 	
-	public Venue(String tipo, String ubicacion, int capacidadMaxima, List<String> restricciones) {
+	public Venue(String tipo, String ubicacion, int capacidadMaxima, List<String> restricciones, String estadoInicial) {
 		this.tipo = tipo;
 		this.ubicacion = ubicacion;
 		this.capacidadMaxima = capacidadMaxima;
@@ -26,10 +27,15 @@ public class Venue {
 			this.restricciones = restricciones;
 		}
 		
+		this.estado = estadoInicial;
 		this.eventosAsociados = new ArrayList<>();
 	}
 	
 	public void programarEvento(Evento nuevoEvento, String fechaEvento) throws VenueOcupado {
+		
+		if (!this.estado.equals("APROBADO")) {
+			throw new VenueOcupado("EL venue no ha sido aprobado por el administrador, contactate con el crack.");
+		}
 		
 		if (verificarDisponibilidad(fechaEvento) == false) {
 			throw new VenueOcupado("Reservaron antes que tu este venue para el dia: "+ fechaEvento + ", metele ganas viejo");
@@ -73,6 +79,14 @@ public class Venue {
 
 	public List<Evento> getEventosAsociados() {
 		return eventosAsociados;
+	}
+
+	public String getEstado() {
+		return estado;
+	}
+
+	public void setEstado(String estado) {
+		this.estado = estado;
 	}
 	
 	

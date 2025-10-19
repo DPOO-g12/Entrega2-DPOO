@@ -5,6 +5,7 @@ import eventos.Oferta;
 import java.util.ArrayList;
 import java.util.*;
 import excepciones.CapacidadExcedidaLocalidad;
+import eventos.Evento;
 
 
 public class Numerada extends Localidades{
@@ -13,9 +14,9 @@ public class Numerada extends Localidades{
 	
 	
 
-	public Numerada(double precio, int capacidadMax, String nombreLocalidad, Oferta oferta,
+	public Numerada(double precio, int capacidadMax, String nombreLocalidad, Oferta oferta, Evento evento,
 			Map<String, Boolean> asientosIniciales) {
-		super(precio, capacidadMax, nombreLocalidad, oferta);
+		super(precio, capacidadMax, nombreLocalidad, oferta, evento);
 		
 		if (asientosIniciales == null) {
 			this.asientos = new HashMap<String, Boolean>();

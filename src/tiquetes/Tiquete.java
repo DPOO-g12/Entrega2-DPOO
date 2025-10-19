@@ -1,9 +1,10 @@
 package tiquetes;
 import java.util.Random;
 
-import cliente.UsuarioComprador;
+import cliente.Usuario;
 import localidades.Localidades;
-import eventos.Evento;;
+import eventos.Evento;
+import excepciones.TiqueteNoTransferibleException;
 
 public abstract class Tiquete {
 	
@@ -13,7 +14,7 @@ public abstract class Tiquete {
 	protected double costoEmision;
 	protected double precioFinal;
 	protected String fecha;
-	protected UsuarioComprador cliente;
+	protected Usuario cliente;
 	protected Localidades localidad;
 	protected Evento evento;
 	protected boolean transferible;
@@ -24,7 +25,7 @@ public abstract class Tiquete {
 	
 	private String generarIdTiquete(Localidades localidad, Evento evento) {
 		// 1. Obtiene un prefijo de la localidad o evento
-        String prefijo = localidad.getNombre().substring(0, Math.min(3, localidad.getNombre().length())).toUpperCase();
+        String prefijo = localidad.getNombreLocalidad().substring(0, Math.min(3, localidad.getNombreLocalidad().length())).toUpperCase();
         
         // 2. Obtiene un timestamp (milisegundos) y un número aleatorio
         long timestamp = System.currentTimeMillis();
@@ -40,7 +41,7 @@ public abstract class Tiquete {
 	
 	
 	
-	public Tiquete(double precioBase, double porcentajeServicio, double cobroFijoEmision, String fecha, UsuarioComprador cliente,
+	public Tiquete(double precioBase, double porcentajeServicio, double cobroFijoEmision, String fecha, Usuario cliente,
 			Localidades localidad, Evento evento, String estado) {
 		
 		
@@ -67,27 +68,21 @@ public abstract class Tiquete {
 	
 	public abstract String getTipoTiquete();
 
-	public void transferirTiquete(UsuarioComprador nuevoCliente) {
-	    // Restricciones
-		// 1. El paquete Deluxe no se puede transferir
-	    if (!this.transferible) { // transferible tiene un valro en defecto de true, el unico que lo tendra en False es el tiquete Deluxe.
+	public void transferirTiquete(Usuario nuevoCliente) throws TiqueteNoTransferibleException {
 	    
-	        throw new IllegalStateException("El tiquete ID " + this.idTiquete + " no se puede transferir (no es transferible).");
+	    if (!this.transferible) {
+	        throw new TiqueteNoTransferibleException("El tiquete ID " + this.idTiquete + " no se puede transferir pillin es Deluxe o su tipo no lo permite. ");
 	    }
-	    // 2. No se puede transferir si ya se ha vencido.
 	    
-	   
 	    if (this.estado.equals("VENCIDO")) {
-	    	throw new IllegalStateException("Se te vencio el tiquete bro");
-	    	}
-	
+	        throw new TiqueteNoTransferibleException("El tiquete ID " + this.idTiquete + " no se puede transferir pillin porque está VENCIDO, A nosotros no nos vz la cara crack :).");
+	    }
+
 
 	    this.cliente = nuevoCliente;
-	    
-	
 	    this.estado = "TRANSFERIDO";
 	    
-	    System.out.println("Tiquete " + this.idTiquete + " transferido exitosamente a: " + nuevoCliente.getLogIn());
+
 	}
 
 
@@ -99,11 +94,11 @@ public abstract class Tiquete {
 		return fecha;
 	}
 
-	public UsuarioComprador getCliente() {
+	public Usuario getCliente() {
 		return cliente;
 	}
 
-	public void setCliente(UsuarioComprador cliente) {
+	public void setCliente(Usuario cliente) {
 		this.cliente = cliente;
 	}
 

@@ -6,13 +6,14 @@ import java.util.ArrayList;
 
 import eventos.Oferta;
 import excepciones.CapacidadExcedidaLocalidad;
+import eventos.Evento;
 
 public class NoNumerada extends Localidades {
 	
 	private int tiquetesVendidos;
 
-	public NoNumerada(double precio, int capacidadMax, String nombreLocalidad, Oferta oferta) {
-		super(precio, capacidadMax, nombreLocalidad, oferta);
+	public NoNumerada(double precio, int capacidadMax, String nombreLocalidad, Oferta oferta, Evento evento) {
+		super(precio, capacidadMax, nombreLocalidad, oferta, evento);
 		this.tiquetesVendidos = 0;
 	}
 
@@ -28,35 +29,27 @@ public class NoNumerada extends Localidades {
 
 	@Override
 	public List<String> venderTiquetes(int cantidad) throws CapacidadExcedidaLocalidad {
-		if (verificarDisponibilidad(cantidad) == false) {
-			throw new CapacidadExcedidaLocalidad("Excediste la capacidad de esta localidad: "+ this.getNombreLocalidad() + " crack");
-			
-		}
-		
-		List<String> vendidos = new ArrayList<>();
-		Random random = new Random();
-		// id utilizando gemini que me ayudo con la forma en que se formateaban los ids de los asientos.
-		String prefijo = this.getNombreLocalidad().substring(0, Math.min(3, this.getNombreLocalidad().length())).toUpperCase();
-		for (int i = 0; i < cantidad; i++) {
-            // Genera un número aleatorio largo y lo formatea a 10 dígitos (ej: GRA-0123456789)
-            long randomNum = random.nextLong() & Long.MAX_VALUE;
-            String token = String.format("%s-%010d", prefijo, randomNum % 10000000000L);
-            vendidos.add(token);
-        }
-		
-		// listo ya no mas gemini
-		
-		this.tiquetesVendidos += cantidad;
-		
-		
-		return vendidos;
+	    if (!verificarDisponibilidad(cantidad)) { 
+	        throw new CapacidadExcedidaLocalidad("Excediste la capacidad de esta localidad: "+ this.getNombreLocalidad() + " crack");
+	    }
+	    this.tiquetesVendidos += cantidad;
+
+	    List<String> asientosAsignados = new ArrayList<>();
+
+
+	    for (int i = 0; i < cantidad; i++) {
+	        asientosAsignados.add(null); 
+	    }
+	    return asientosAsignados;
 	}
+	
 	
 
 	public int getTiquetesVendidos() {
 		return tiquetesVendidos;
 	}
 	
+
 	
 
 }

@@ -1,7 +1,8 @@
 package cliente;
 
-import eventos.Evento;
+
 import tiquetes.Tiquete;
+import localidades.Localidades;
 
 public abstract class Usuario {
 	
@@ -19,7 +20,10 @@ public abstract class Usuario {
 		this.saldo = saldo;
 	
 	}
-	public abstract void comprarTiquete(Evento evento, int Cantidad);
+	public abstract void comprarTiquete(Localidades localidad, int cantidad, double porcentajeServicio, double cobroEmision ) throws Exception;
+	
+	
+	
 	public abstract void pedirRembolso(Tiquete tiquete);
 	public String getLogIn() {
 		return logIn;
