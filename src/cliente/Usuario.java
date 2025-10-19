@@ -2,6 +2,11 @@ package cliente;
 
 
 import tiquetes.Tiquete;
+
+import java.util.List;
+
+import excepciones.AutenticacionFallidaException;
+import excepciones.TiqueteNoTransferibleException;
 import localidades.Localidades;
 
 public abstract class Usuario {
@@ -20,11 +25,14 @@ public abstract class Usuario {
 		this.saldo = saldo;
 	
 	}
-	public abstract void comprarTiquete(Localidades localidad, int cantidad, double porcentajeServicio, double cobroEmision ) throws Exception;
+	public abstract List<Tiquete> comprarTiquete(Localidades localidad, int cantidad, double porcentajeServicio, double cobroEmision ) throws Exception;
+
+	public abstract void pedirRembolso(Tiquete tiquete) throws TiqueteNoTransferibleException;
+	
+	public abstract void transferirTiquete(Tiquete tiquete,String passwordConfirmacion, String loginDestinatario, List<Usuario> todosLosUsuarios) throws AutenticacionFallidaException, TiqueteNoTransferibleException, Exception;
 	
 	
 	
-	public abstract void pedirRembolso(Tiquete tiquete);
 	public String getLogIn() {
 		return logIn;
 	}

@@ -14,9 +14,9 @@ public class Numerada extends Localidades{
 	
 	
 
-	public Numerada(double precio, int capacidadMax, String nombreLocalidad, Oferta oferta, Evento evento,
+	public Numerada(double precio, int capacidadMax, String nombreLocalidad, Evento evento,
 			Map<String, Boolean> asientosIniciales) {
-		super(precio, capacidadMax, nombreLocalidad, oferta, evento);
+		super(precio, capacidadMax, nombreLocalidad, evento);
 		
 		if (asientosIniciales == null) {
 			this.asientos = new HashMap<String, Boolean>();

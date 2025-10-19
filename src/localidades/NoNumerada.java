@@ -12,8 +12,8 @@ public class NoNumerada extends Localidades {
 	
 	private int tiquetesVendidos;
 
-	public NoNumerada(double precio, int capacidadMax, String nombreLocalidad, Oferta oferta, Evento evento) {
-		super(precio, capacidadMax, nombreLocalidad, oferta, evento);
+	public NoNumerada(double precio, int capacidadMax, String nombreLocalidad, Evento evento) {
+		super(precio, capacidadMax, nombreLocalidad, evento);
 		this.tiquetesVendidos = 0;
 	}
 

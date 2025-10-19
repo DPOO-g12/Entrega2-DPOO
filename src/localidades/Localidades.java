@@ -11,11 +11,11 @@ public abstract class Localidades {
 	private Oferta oferta;
 	private Evento evento;
 	
-	public Localidades(double precio, int capacidadMax, String nombreLocalidad, Oferta oferta, Evento evento) {
+	public Localidades(double precio, int capacidadMax, String nombreLocalidad, Evento evento) {
 		this.precio = precio;
 		this.capacidadMax = capacidadMax;
 		this.nombreLocalidad = nombreLocalidad;
-		this.oferta = oferta;
+		this.oferta = null;
 		this.evento = evento;
 	}
 	
@@ -56,6 +56,10 @@ public abstract class Localidades {
 	
 	public Evento getEvento() {
 	    return evento;
+	}
+	
+	public void setOferta(Oferta oferta) {
+		this.oferta = oferta;
 	}
 	
 	
