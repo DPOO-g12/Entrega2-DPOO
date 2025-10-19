@@ -9,6 +9,7 @@ import excepciones.VenueOcupado;
 
 public class Venue {
 	
+	private int id_venue;
 	private String tipo;
 	private String ubicacion;
 	private int capacidadMaxima;
@@ -18,6 +19,7 @@ public class Venue {
 	
 	
 	public Venue(String tipo, String ubicacion, int capacidadMaxima, List<String> restricciones, String estadoInicial) {
+		this.id_venue = -1;
 		this.tipo = tipo;
 		this.ubicacion = ubicacion;
 		this.capacidadMaxima = capacidadMaxima;
@@ -88,6 +90,14 @@ public class Venue {
 	public void setEstado(String estado) {
 		this.estado = estado;
 	}
+	
+	public int getIdVenue() {
+        return id_venue;
+    }
+
+    public void setIdVenue(int id_venue) {
+        this.id_venue = id_venue;
+    }
 	
 	
 	

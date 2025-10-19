@@ -5,6 +5,7 @@ import eventos.Evento;
 
 
 public abstract class Localidades {
+	private int id_localidad;
 	private double precio;
 	private int capacidadMax; 
 	private String nombreLocalidad;
@@ -12,6 +13,7 @@ public abstract class Localidades {
 	private Evento evento;
 	
 	public Localidades(double precio, int capacidadMax, String nombreLocalidad, Evento evento) {
+		this.id_localidad = -1;
 		this.precio = precio;
 		this.capacidadMax = capacidadMax;
 		this.nombreLocalidad = nombreLocalidad;
@@ -61,6 +63,14 @@ public abstract class Localidades {
 	public void setOferta(Oferta oferta) {
 		this.oferta = oferta;
 	}
+	
+	public int getIdLocalidad() {
+        return id_localidad;
+    }
+
+    public void setIdLocalidad(int id_localidad) {
+        this.id_localidad = id_localidad;
+    }
 	
 	
 	

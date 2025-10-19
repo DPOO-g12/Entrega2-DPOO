@@ -8,6 +8,7 @@ import excepciones.TiqueteNoTransferibleException;
 
 public abstract class Tiquete {
 	
+	private int id_tiquete_db;
 	protected String idTiquete; 
 	protected double precioBase;
 	protected double costoServicio;
@@ -44,7 +45,7 @@ public abstract class Tiquete {
 	public Tiquete(double precioBase, double porcentajeServicio, double cobroFijoEmision, String fecha, Usuario cliente,
 			Localidades localidad, Evento evento, String estado) {
 		
-		
+		this.id_tiquete_db = -1;
 		this.idTiquete = generarIdTiquete(localidad, evento);
 		
 		this.precioBase = precioBase;
@@ -144,6 +145,14 @@ public abstract class Tiquete {
 	public double getPrecioFinal() {
 		return precioFinal;
 	}
+	
+	public int getIdTiqueteDb() {
+        return id_tiquete_db;
+    }
+
+    public void setIdTiqueteDb(int id_tiquete_db) {
+        this.id_tiquete_db = id_tiquete_db;
+    }
 
 	
 	
