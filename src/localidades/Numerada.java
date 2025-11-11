@@ -18,10 +18,13 @@ public class Numerada extends Localidades{
 			Map<String, Boolean> asientosIniciales) {
 		super(precio, capacidadMax, nombreLocalidad, evento);
 		
-		if (asientosIniciales == null) {
-			this.asientos = new HashMap<String, Boolean>();
+		if (asientosIniciales == null || asientosIniciales.isEmpty()) {
+		    this.asientos = new HashMap<>();
+		    for (int i = 1; i <= capacidadMax; i++) {
+		        this.asientos.put("Asiento " + i, false); 
+		    }
 		} else {
-			this.asientos = asientosIniciales;
+		    this.asientos = asientosIniciales;
 		}
 		
 	}
@@ -45,7 +48,7 @@ public class Numerada extends Localidades{
 		List<String> asientosAsignados = new ArrayList<>();
 		
 		if (verificarDisponibilidad(cantidad) == false) {
-			throw new CapacidadExcedidaLocalidad("Excedite la capacidad de la localidad: " + this.getNombreLocalidad() + " crack ");
+			throw new CapacidadExcedidaLocalidad("Excediste la capacidad de la localidad: " + this.getNombreLocalidad() + " crack ");
 		}
 		int recorridos = 0;
 		for (Map.Entry<String, Boolean> entry : asientos.entrySet()) {
