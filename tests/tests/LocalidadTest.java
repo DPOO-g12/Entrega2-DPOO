@@ -110,7 +110,10 @@ public class LocalidadTest {
 	@Test
 	void testGenerarLocalidadNumerada() {
 		
-		assertEquals(2000,localidad2.getCapacidadMax(), "La capacidad es incorrecta");
+		assertEquals(300000, localidad2.getPrecio(), "El precio es incorrecto");
+		assertEquals(2000, localidad2.getCapacidadMax(), "La capacidad es incorrecta");
+		assertEquals("Campin", localidad2.getNombreLocalidad(), "El nombre es incorrecto");
+		assertEquals("12/12/25", localidad2.getEvento().getFecha(), "La fecha es incorrecta");
 	}
 	
 	@Test
@@ -124,4 +127,5 @@ public class LocalidadTest {
 
 
 	}
+	
 }

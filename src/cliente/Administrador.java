@@ -4,6 +4,7 @@ import java.util.HashMap;
 import eventos.Evento;
 import eventos.Venue;
 import localidades.Localidades;
+import marketplace.Marketplace;
 import tiquetes.Tiquete;
 import java.util.List;
 
@@ -182,5 +183,9 @@ public class Administrador extends Usuario {
 	public void transferirTiquete(Tiquete tiquete,String passwordConfirmacion, String loginDestinatario, List<Usuario> todosLosUsuarios) {
 	    // Vacío
 	}
+	
+	 public void eliminarOferta(Marketplace marketplace, String idOferta) {
+	        marketplace.eliminarOfertaPorAdmin(idOferta, this);
+	    }
 	
 }
