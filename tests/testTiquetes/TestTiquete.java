@@ -1,9 +1,12 @@
 package testTiquetes;
 
+import static org.junit.Assert.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import org.junit.jupiter.api.BeforeEach;
@@ -12,6 +15,7 @@ import org.junit.jupiter.api.Test;
 import cliente.OrganizadorEventos;
 import eventos.Evento;
 import eventos.Venue;
+import excepciones.TiqueteNoTransferibleException;
 import excepciones.VenueOcupado;
 import localidades.Localidades;
 import localidades.NoNumerada;
@@ -90,11 +94,80 @@ public class TestTiquete {
 		
 		assertNotEquals (tiquete1.getIdTiquete(), tiquete2.getIdTiquete(), "Dos tiquetes no pueden tener el mismo ID");
 		
-		
-        
-        
+		assertTrue (tiquete1.getIdTiquete().startsWith("GEN-"), "El id debe empezar con el prefijo de la localidad");
+
 	}
 	
+	// TEST PARA LOGICA DE TRASNFERENCIA DE TIQUETE 
+	
+	@Test 
+	
+	void testTransferenciaExitosa () throws TiqueteNoTransferibleException {
+		
+		Basico tiquete = new Basico(PRECIO_BASE, PORCENTAJE_SERVICIO, COBRO_EMISION, FECHA, clienteOriginal, localidad, evento, "ACTIVO", null);
+		
+		tiquete.transferirTiquete(clienteDestinatario);
+		
+		assertEquals ("TRANSFERIDO", tiquete.getEstado(), "El estado del tiquete debe cambiar");
+		
+		assertSame(clienteDestinatario, tiquete.getCliente(), "El dueño del cliente debe cambiar");
+		
+	}
+	
+	@Test 
+	
+	void testTransferenciaFallaSiNoTransferible () {
+		
+		Basico tiquete = new Basico(PRECIO_BASE, PORCENTAJE_SERVICIO, COBRO_EMISION, FECHA, 
+                clienteOriginal, localidad, evento, "ACTIVO", null);
+		
+		tiquete.setTransferible(false);
+		
+		assertThrows (TiqueteNoTransferibleException.class, () -> tiquete.transferirTiquete(clienteDestinatario),
+				"Debe fallas si IsTransferable es false");
+		
+		
+		assertEquals ("ACTIVO", tiquete.getEstado(), "El estado no debe cambiar");
+		
+		// assertSame: Se usa cuando necesitas asegurar que se está trabajando con la misma instancia de un objeto,
+		// no una copia o un objeto equivalente. Por ejemplo, si un método debe devolver el mismo objeto que se le pasó.
+				
+		assertSame (clienteOriginal, tiquete.getCliente(), "El cliente no debio cambiar");
+
+	}
+	
+	@Test 
+	
+	void testTransferenciaFallaSiVencido () {
+		
+		Basico tiquete = new Basico(PRECIO_BASE, PORCENTAJE_SERVICIO, COBRO_EMISION, FECHA, 
+                clienteOriginal, localidad, evento, "VENCIDO", null);
+		
+		assertThrows (TiqueteNoTransferibleException.class, ()-> tiquete.transferirTiquete(clienteDestinatario),
+				"El tiquete no se debe poder transferir si ya se vencio");
+		
+		
+		assertEquals("VENCIDO", tiquete.getEstado(), "El estado debe permanecer como VENCIDO");
+		
+		assertSame (clienteOriginal, tiquete.getCliente(), "EL tiquete no se debio transferir");
+		
+		
+	}
+	
+	// basicos getters y setters 
+	
+	@Test
+    void testSetEstadoYTransferible() {
+        //Verificar el correcto funcionamiento de los setters básicos.
+        Basico tiquete = new Basico(PRECIO_BASE, PORCENTAJE_SERVICIO, COBRO_EMISION, FECHA, 
+                                     clienteOriginal, localidad, evento, "ACTIVO", null);
+
+        tiquete.setEstado("PENDIENTE_REEMBOLSO");
+        assertEquals("PENDIENTE_REEMBOLSO", tiquete.getEstado(), "El estado debe ser el asignado por setter");
+        
+        tiquete.setTransferible(false);
+        assertFalse(tiquete.isTransferible(), "El estado debe ser el asigando por setter");
+    }
 	
 	
 

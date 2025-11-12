@@ -77,11 +77,36 @@ public class Multiple extends Tiquete  {
 		return eventosAsociados;
 	}
 	
-	
-	
-	
-	
-	
-	
+	public void transferirUnoDeMisTiquetes(String idTiqueteHijo, Usuario nuevoCliente) 
+		    throws TiqueteNoTransferibleException {
+		    
+		    //Validar que el PAQUETE no ha sido transferido.
+		    if (this.getEstado().equals("TRANSFERIDO")) {
+		        throw new TiqueteNoTransferibleException(
+		            "El paquete completo ya ha sido transferido. No puede modificar sus componentes."
+		        );
+		    }
+		    
+		    //Encontrar el tiquete hijo por ID (usando su ID único)
+		    Tiquete tiqueteHijo = null;
+		    for (Tiquete t : tiquetesIncluidos) {
+		        if (t.getIdTiquete().equals(idTiqueteHijo)) {
+		            tiqueteHijo = t;
+		            break;
+		        }
+		    }
+		    
+		    if (tiqueteHijo == null) {
+		        throw new TiqueteNoTransferibleException("Tiquete hijo con ID " + idTiqueteHijo + " no encontrado en el paquete.");
+		    }
+		    
+		    //Ejecutar la transferencia del hijo
+		    //El método transferirTiquete del hijo se encarga de cambiar su estado y cliente.
+		    tiqueteHijo.transferirTiquete(nuevoCliente);
+		    
+		    // 4. Regla de Negocio: Opcional. Si quieres que el paquete padre cambie de estado 
+		    //    después de la primera transferencia individual, lo harías aquí. 
+		    //    Por ahora, el padre permanece 'ACTIVO' como discutimos.
+		}
 
 }
