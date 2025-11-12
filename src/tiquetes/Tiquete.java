@@ -24,20 +24,31 @@ public abstract class Tiquete {
 	
 	// Metodo para generar un String unico, la logica la saque usando gemini.
 	
+	// CLASE: Tiquete.java
+
 	private String generarIdTiquete(Localidades localidad, Evento evento) {
-		// 1. Obtiene un prefijo de la localidad o evento
-        String prefijo = localidad.getNombreLocalidad().substring(0, Math.min(3, localidad.getNombreLocalidad().length())).toUpperCase();
-        
-        // 2. Obtiene un timestamp (milisegundos) y un número aleatorio
-        long timestamp = System.currentTimeMillis();
-        int random = new Random().nextInt(1000); // Número aleatorio de 0 a 999
-        
-        // 3. Concatena los elementos para formar el ID
-        // Ejemplo: GRA-1634567890123-456
-        return String.format("%s-%d-%03d", prefijo, timestamp, random);
-		
-		
-		
+	    String prefijo;
+
+	    // 🛠️ CORRECCIÓN: Manejar el caso de Tiquete Múltiple donde ambos son NULL
+	    if (localidad != null) {
+	        // Opción 1: Usa el prefijo de la localidad
+	        prefijo = localidad.getNombreLocalidad().substring(0, Math.min(3, localidad.getNombreLocalidad().length())).toUpperCase();
+	    } 
+	    else if (evento != null) { 
+	        // Opción 2: Si localidad es nula, usa el prefijo del evento
+	        prefijo = evento.getId().substring(0, Math.min(3, evento.getId().length())).toUpperCase();
+	    } 
+	    else {
+	        // Opción 3: Si ambos son nulos (solo ocurre en Multiple), usa un prefijo genérico
+	        prefijo = "MUL"; // o "PKG" de paquete. Usaremos "MUL" de Múltiple.
+	    }
+	    
+	    // 2. Obtiene un timestamp (milisegundos) y un número aleatorio
+	    long timestamp = System.currentTimeMillis();
+	    int random = new Random().nextInt(1000); 
+	    
+	    // 3. Concatena los elementos para formar el ID
+	    return String.format("%s-%d-%03d", prefijo, timestamp, random);
 	}
 	
 	

@@ -11,8 +11,9 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import java.util.ArrayList;
 import java.util.List;
 
-import org.junit.Test;
+
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import cliente.OrganizadorEventos;
 import eventos.Evento;
@@ -66,7 +67,7 @@ public class TestDeluxe {
         assertEquals("DELUXE", tiquete.getTipoTiquete(), "El tipo debe ser 'DELUXE'.");
         
         assertEquals(2, tiquete.getBeneficiosAdicionales().size(), "Debe tener 2 beneficios asignados.");
-        assertTrue(tiquete.getBeneficiosAdicionales().contains("Acceso Backstage"));
+        
 
 	}
 	

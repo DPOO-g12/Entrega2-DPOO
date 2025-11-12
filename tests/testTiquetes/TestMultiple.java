@@ -44,9 +44,15 @@ public class TestMultiple {
 		clienteOriginal = new OrganizadorEventos("userOriginal", "pass", 100.0);
         clienteDestinatario = new OrganizadorEventos("userDestino", "pass", 50.0);
         
-        Venue venue = new Venue("Lugar", "Ubicacion", 100, null, "APROBADO");
-        evento1 = new Evento("E01", "Show 1", FECHA, venue, clienteOriginal);
-        evento2 = new Evento("E02", "Show 2", FECHA, venue, clienteOriginal);
+        Venue venue1 = new Venue("Lugar 1", "Ubicacion 1", 100, null, "APROBADO"); // 🛠️ NUEVO VENUE
+        // Venue para Evento 2 (SEPARADO)
+        Venue venue2 = new Venue("Lugar 2", "Ubicacion 2", 100, null, "APROBADO"); // 🛠️ NUEVO VENUE
+        
+        // Usamos Venue1 para Evento1
+        evento1 = new Evento("E01", "Show 1", FECHA, venue1, clienteOriginal); 
+        
+        // Usamos Venue2 para Evento2
+        evento2 = new Evento("E02", "Show 2", FECHA, venue2, clienteOriginal);
         
         tiqueteBase1 = new Basico(50.0, 0.0, 0.0, FECHA, clienteOriginal, null, evento1, "ACTIVO", "A-1");
         tiqueteBase2 = new Basico(75.0, 0.0, 0.0, FECHA, clienteOriginal, null, evento2, "ACTIVO", "B-2");
