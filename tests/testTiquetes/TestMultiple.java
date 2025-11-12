@@ -69,11 +69,13 @@ public class TestMultiple {
 		Multiple paquete = new Multiple (PRECIO_PAQUETE, FECHA,clienteOriginal, "ACTIVO", tiquetesInternos,eventosAsociados);
 		
 		assertEquals ("MULTIPLE", paquete.getTipoTiquete(), "El tipo debe ser multiple");
-		assertEquals (PRECIO_PAQUETE, paquete.getPrecioFinal(), "El precio final debe ser el precio del paquete");
+		// 🛠️ CORRECCIÓN 1: Agregar el delta (0.001) para la comparación de 'double'.
+		assertEquals (PRECIO_PAQUETE, paquete.getPrecioFinal(), 0.001, "El precio final debe ser el precio del paquete");
 		
-		assertEquals (0.0, paquete.getCostoServicio(), "Un paquete no debe tener costo de servicio");
-		assertEquals (0.0, paquete.getCostoEmision(), "Un paquete no debe tener costo de emision");
-		
+		// 🛠️ CORRECCIÓN 1: Agregar el delta (0.001) para la comparación de 'double'.
+		assertEquals (0.0, paquete.getCostoServicio(), 0.001, "Un paquete no debe tener costo de servicio");
+		// 🛠️ CORRECCIÓN 1: Agregar el delta (0.001) para la comparación de 'double'.
+		assertEquals (0.0, paquete.getCostoEmision(), 0.001, "Un paquete no debe tener costo de emision");
 		assertSame (clienteOriginal, paquete.getCliente(), "El cliente debe ser el asigando");
 		
 		assertEquals (2, paquete.getEventosAsociados().size(), "Debe tener la cantidad de eventos del paquete");
@@ -160,8 +162,9 @@ public class TestMultiple {
 		
 		assertSame (clienteOriginal, paquete.getCliente(), "El dueño del paquete no debio cambiar");
 		
-		assertEquals("ACTIVO", tiqueteBase2.getEstado(), "El otro tiquete hijo debe haber sido tocado.");
-                
+		// 🛠️ CORRECCIÓN 2: Ajuste el mensaje de error para ser preciso: NO debe cambiar.
+		assertEquals("ACTIVO", tiqueteBase2.getEstado(), "El otro tiquete hijo NO debe cambiar su estado, debe seguir ACTIVO.");
+		                
 		assertEquals("ACTIVO", paquete.getEstado(), "El paquete padre NO debe cambiar su estado si un hijo es transferido individualmente.");
 	}
 	
