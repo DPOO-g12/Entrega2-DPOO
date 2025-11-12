@@ -179,9 +179,8 @@ public class TestMultiple {
 		
 		assertThrows (TiqueteNoTransferibleException.class, () -> 
 		paquete.transferirUnoDeMisTiquetes(tiqueteBase1.getIdTiquete(), clienteOriginal), "No se puede trasnferir un tiquete ind. si el paquete al que pertenece ya se trasnfirio");
-
 	}
-	
+
 	@Test 
 	
 	void testTransferenciaIndividualFallaSiTiqueteNoExiste () {
