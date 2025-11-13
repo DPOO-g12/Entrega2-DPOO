@@ -199,50 +199,52 @@ public class OrganizadorEventos extends Usuario {
 	}
 
 
-	public Multiple crearPaquetePaseDeTemporada(List<Localidades> localidadesDelPaquete, double precioPaquete) throws CapacidadExcedidaLocalidad, OperacionNoAutorizadaException {
+	public Multiple crearPaquetePaseDeTemporada(List<Localidades> localidadesDelPaquete, double precioPaquete) 
+	        throws CapacidadExcedidaLocalidad, OperacionNoAutorizadaException {
 
-		List<Tiquete> tiquetesInternos = new ArrayList<>();
+	    List<Tiquete> tiquetesInternos = new ArrayList<>();
 	    List<Evento> eventosAsociados = new ArrayList<>();
-	    
+	    List<Localidades> localidadesAComprar = new ArrayList<>(); // Lista temporal para validar
+
+	    // === FASE 1: SÓLO VALIDACIÓN (Sin vender) ===
 	    for (Localidades loc : localidadesDelPaquete) {
 	        Evento evento = loc.getEvento();
-	        
-	        //Validar que el evento le pertenece a este organizador
+
+	        // 1. Validar Pertenencia
 	        if (!evento.getPromotor().getLogIn().equals(this.getLogIn())) {
-	            throw new OperacionNoAutorizadaException(
-	                "No puedes crear paquetes con tiquetes del evento '" + 
-	                evento.getNombre() + "', no te pertenece."
-	            );
+	            throw new OperacionNoAutorizadaException("...");
 	        }
-	        
+
+	        // 2. Validar Capacidad (Solo verificar, NO vender)
 	        if (!loc.verificarDisponibilidad(1)) {
-	            throw new CapacidadExcedidaLocalidad(
-	                "No hay disponibilidad en " + loc.getNombreLocalidad() + 
-	                " para crear el paquete."
-	            );
+	            throw new CapacidadExcedidaLocalidad("No hay disponibilidad en " + loc.getNombreLocalidad() + "...");
 	        }
+
+	        localidadesAComprar.add(loc); // Agregar para la fase de ejecución
+
+	        if (!eventosAsociados.contains(evento)) {
+	            eventosAsociados.add(evento);
+	        }
+	    }
+
+	    // === FASE 2: EJECUCIÓN (Si todas las validaciones pasaron) ===
+	    for (Localidades loc : localidadesAComprar) {
+	        Evento evento = loc.getEvento();
 	        
-	        List<String> asiento = loc.venderTiquetes(1);
+	        // Ejecutar la venta AHORA (donde falló antes)
+	        List<String> asiento = loc.venderTiquetes(1); 
 	        
-	        Tiquete tiqueteInterno = new Basico(loc.getPrecioFinal(), 0.0, 0.0, evento.getFecha(),this, loc,evento, "CORTESIA", asiento.get(0));
-	            
-	            tiquetesInternos.add(tiqueteInterno);
-	            
-	            if (!eventosAsociados.contains(evento)) {
-	                eventosAsociados.add(evento);
-	            }
-	            
-	            
-	}
+	        Tiquete tiqueteInterno = new Basico(loc.getPrecioFinal(), 0.0, 0.0, evento.getFecha(), this, loc, evento, "CORTESIA", asiento.get(0));
+	        tiquetesInternos.add(tiqueteInterno);
+	    }
 	    
-	    String fechaHoy = java.time.LocalDate.now().toString(); 
+	    // El resto de tu código de creación del paquete (Multiple)
 
-        Multiple paquete = new Multiple( precioPaquete,fechaHoy,this,"ACTIVO",tiquetesInternos,eventosAsociados);
-        
-        this.tiquetesComprados.add(paquete);
-        
-        return paquete;
+	    String fechaHoy = java.time.LocalDate.now().toString();
 
+	    Multiple paquete = new Multiple(precioPaquete, fechaHoy, this, "ACTIVO", tiquetesInternos, eventosAsociados);
+	    this.tiquetesComprados.add(paquete);
+	    return paquete;
 	}
 	
 	
