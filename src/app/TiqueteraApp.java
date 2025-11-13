@@ -19,12 +19,12 @@ import java.util.Scanner; // Para leer desde la consola
 
 public class TiqueteraApp {
 
-    // --- Listas Maestras (La "Memoria" de la App) ---
+    // --- Listas  La "Memoria" de la App
     // Guardan el estado de la aplicación mientras se ejecuta.
     private List<Usuario> usuarios;
     private List<Venue> venues;
     private List<Evento> eventos;
-    private List<Tiquete> tiquetesVendidos; // ¡La lista maestra que necesitábamos!
+    private List<Tiquete> tiquetesVendidos; 
     private Usuario usuarioActual;
     private Administrador admin;
    
@@ -74,7 +74,7 @@ public class TiqueteraApp {
             String login = "admin_jefe";
             String pass = "12345";
             
-            // 2. Lógica de Negocio (Paso 2)
+           
             // No hay mucha lógica aquí, solo crear el objeto
             Administrador admin = new Administrador(login, pass);
             admin.fijarCobroPorEmision(5000.0); // Lógica
@@ -84,7 +84,7 @@ public class TiqueteraApp {
             System.out.println("Guardando en BD...");
             this.usuarioDAO.guardarUsuario(admin);
             
-            // 4. Actualizar nuestra "memoria" local
+            // 4. Actualizar la "memoria" local
             this.usuarios.add(admin);
             
             System.out.println("¡Administrador '" + login + "' registrado y guardado en la BD exitosamente!");
