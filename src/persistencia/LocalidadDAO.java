@@ -22,13 +22,7 @@ import java.util.Map;
  */
 public class LocalidadDAO {
 
-    /**
-     * Guarda una nueva Localidad (Numerada o NoNumerada) en la base de datos.
-     * Utiliza una transacción.
-     *
-     * @param loc La Localidad a guardar.
-     * @throws SQLException si ocurre un error.
-     */
+
     public void guardarLocalidad(Localidades loc) throws SQLException {
         
         // SQL para la tabla PADRE
@@ -113,18 +107,12 @@ public class LocalidadDAO {
     /**
      * Carga todas las localidades para un evento específico.
      * Este método "reconstruye" los objetos (NoNumerada o Numerada) usando JOINS.
-     *
-     * @param evento El evento del cual cargar las localidades.
-     * @param todasLasOfertas (Aún no lo usamos, pero será para hidratar)
-     * @return Una lista de Localidades.
-     * @throws SQLException si ocurre un error.
-     */
+/**
+ * 
+ */
     public List<Localidades> cargarLocalidadesParaEvento(Evento evento, List<Oferta> todasLasOfertas) throws SQLException {
         List<Localidades> localidades = new ArrayList<>();
         
-        // Este SQL usa LEFT JOIN para "pegar" las tablas hijas.
-        // Si hay un valor en 'is_numerada', es Numerada.
-        // Si hay un valor en 'tiquetes_vendidos', es NoNumerada.
         String sql = "SELECT l.*, " +
                      "       nn.tiquetes_vendidos, " +
                      "       n.id_localidad AS is_numerada " +
@@ -150,37 +138,29 @@ public class LocalidadDAO {
                 int capacidad = rs.getInt("capacidad_max");
                 int id_oferta_fk = rs.getInt("id_oferta");
                 
-                // TODO: Hidratar la oferta
-                Oferta oferta = null; // = findOfertaById(todasLasOfertas, id_oferta_fk);
+                Oferta oferta = null; // TODO: Hidratar la oferta
 
                 Localidades loc;
                 
-                // Verificamos si es Numerada
                 if (rs.getObject("is_numerada") != null) {
-                    // Es Numerada. Cargamos sus asientos.
                     Map<String, Boolean> asientos = cargarAsientos(id_localidad, conn);
                     loc = new Numerada(precio, capacidad, nombre, evento, asientos);
                     
                 } else {
                     // Es NoNumerada
+                    NoNumerada nn = new NoNumerada(precio, capacidad, nombre, evento);
                     int tiquetesVendidos = rs.getInt("tiquetes_vendidos");
-                    loc = new NoNumerada(precio, capacidad, nombre, evento);
-                    // (Necesitaríamos un setTiquetesVendidos en NoNumerada para ser precisos)
+                    nn.setTiquetesVendidos(tiquetesVendidos); // <-- ¡ARREGLO APLICADO!
+                    loc = nn;
                 }
 
-                loc.setIdLocalidad(id_localidad); // Guardamos el ID de la BD
+                loc.setIdLocalidad(id_localidad);
                 loc.setOferta(oferta);
                 localidades.add(loc);
             }
-            
-        } catch (SQLException e) {
-            throw new SQLException("Error al cargar localidades: " + e.getMessage());
         } finally {
-            if (rs != null) rs.close();
-            if (pstmt != null) pstmt.close();
-            if (conn != null) conn.close();
+           
         }
-        
         return localidades;
     }
 
@@ -222,9 +202,29 @@ public class LocalidadDAO {
         }
         return asientos;
     }
+    public void actualizarVentaNoNumerada(NoNumerada loc) throws SQLException {
+        String sql = "UPDATE NoNumerada SET tiquetes_vendidos = ? WHERE id_localidad = ?";
+        
+        try (Connection conn = ConexionSQLite.conectar();
+             PreparedStatement pstmt = conn.prepareStatement(sql)) {
+            
+            pstmt.setInt(1, loc.getTiquetesVendidos());
+            pstmt.setInt(2, loc.getIdLocalidad());
+            pstmt.executeUpdate();
+        }
+    }
+
+    public void actualizarAsientoOcupado(int id_localidad, String identificadorAsiento) throws SQLException {
+        String sql = "UPDATE Asiento SET ocupado = 1 WHERE id_localidad = ? AND identificador_asiento = ?";
+        
+        try (Connection conn = ConexionSQLite.conectar();
+             PreparedStatement pstmt = conn.prepareStatement(sql)) {
+            
+            pstmt.setInt(1, id_localidad);
+            pstmt.setString(2, identificadorAsiento);
+            pstmt.executeUpdate();
+        }
+    }
     
-    // TODO:
-    // public void actualizarVentaNoNumerada(NoNumerada loc)
-    // public void actualizarAsientos(int id_localidad, List<String> asientosVendidos)
-    // public void actualizarIdOferta(Localidades loc)
+
 }

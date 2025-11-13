@@ -17,6 +17,24 @@ public class Evento {
 	private OrganizadorEventos promotor;
 	private String estado;
 	
+	private Evento(String id, String nombre, String fecha, Venue venue, OrganizadorEventos promotor, String estado) {
+        this.id = id;
+        this.nombre = nombre;
+        this.fecha = fecha;
+        this.venue = venue;
+        this.promotor = promotor;
+        this.estado = estado;
+        this.localidades = new HashMap<String, Localidades>(); // Inicializar el mapa
+    }
+    /**
+     * "Fábrica" para crear un objeto Evento desde los datos de la BD.
+     * Utiliza el constructor de hidratación privado.
+     */
+	
+    public static Evento cargarDesdeDB(String id, String nombre, String fecha, Venue venue, OrganizadorEventos promotor, String estado) {
+        return new Evento(id, nombre, fecha, venue, promotor, estado);
+    }
+	
 	public Evento(String id, String nombre, String fecha, Venue venue, OrganizadorEventos promotor) throws VenueOcupado {
 		super();
 		this.id = id;

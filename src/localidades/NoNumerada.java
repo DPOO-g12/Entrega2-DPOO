@@ -48,6 +48,9 @@ public class NoNumerada extends Localidades {
 	public int getTiquetesVendidos() {
 		return tiquetesVendidos;
 	}
+	public void setTiquetesVendidos(int tiquetesVendidos) {
+        this.tiquetesVendidos = tiquetesVendidos;
+    }
 	
 
 	
