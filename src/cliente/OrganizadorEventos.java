@@ -10,6 +10,7 @@ import excepciones.AutenticacionFallidaException;
 import excepciones.CapacidadExcedidaLocalidad;
 import excepciones.OperacionNoAutorizadaException;
 import excepciones.TiqueteNoTransferibleException;
+import excepciones.VenueOcupado;
 
 import java.time.LocalDateTime;
 import java.util.*;
@@ -36,9 +37,20 @@ public class OrganizadorEventos extends Usuario {
 	    return tiquetesComprados;
 	}
 
-	public void agregarEvento(Evento evento) {
-		this.eventosOrganizados.add(evento);
-	}
+	public Evento agregarEvento(String id, String nombre, String fecha, Venue venue) 
+		    throws VenueOcupado, Exception {
+		    Evento nuevoEvento = new Evento(
+		        id, 
+		        nombre, 
+		        fecha, 
+		        venue, 
+		        this
+		    );
+		    
+		  
+		    this.eventosOrganizados.add(nuevoEvento);
+		    return nuevoEvento;
+		}
 
 
 	

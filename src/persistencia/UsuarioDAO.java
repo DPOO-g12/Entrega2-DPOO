@@ -111,6 +111,17 @@ public class UsuarioDAO {
         }
     }
     
+    public void actualizarSaldo(Usuario usuario) throws SQLException {
+        String sql = "UPDATE Usuario SET saldo = ? WHERE login = ?";
+        
+        try (Connection conn = ConexionSQLite.conectar();
+             PreparedStatement pstmt = conn.prepareStatement(sql)) {
+            
+            pstmt.setDouble(1, usuario.getSaldo());
+            pstmt.setString(2, usuario.getLogIn());
+            pstmt.executeUpdate();
+        }
+    }
     
     public List<Usuario> cargarTodosLosUsuarios() throws SQLException {
         List<Usuario> usuarios = new ArrayList<>();
@@ -171,4 +182,5 @@ public class UsuarioDAO {
         }
         return usuarios; // Devolvemos la lista de usuarios reconstruidos
     }
+    
 }

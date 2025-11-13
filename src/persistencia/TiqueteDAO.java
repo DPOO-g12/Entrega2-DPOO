@@ -23,13 +23,7 @@ import java.util.HashMap;
  */
 public class TiqueteDAO {
 
-    /**
-     * Guarda un nuevo Tiquete (de cualquier tipo) en la base de datos.
-     * Utiliza una transacción para guardar en el padre, hijo y tablas de listas.
-     *
-     * @param tiquete El Tiquete a guardar.
-     * @throws SQLException si ocurre un error.
-     */
+
     public void guardarTiquete(Tiquete tiquete) throws SQLException {
         
         // SQL para la tabla PADRE
@@ -130,12 +124,7 @@ public class TiqueteDAO {
         }
     }
     
-    /**
-     * Actualiza el estado de un Tiquete (ej. "TRANSFERIDO", "REEMBOLSADO").
-     *
-     * @param tiquete El tiquete con el estado actualizado.
-     * @throws SQLException si ocurre un error.
-     */
+
     public void actualizarEstadoTiquete(Tiquete tiquete) throws SQLException {
         String sql = "UPDATE Tiquete SET estado = ? WHERE id_tiquete_db = ?";
         
@@ -148,12 +137,7 @@ public class TiqueteDAO {
         }
     }
     
-    /**
-     * Actualiza el dueño (cliente) de un Tiquete (para transferencias).
-     *
-     * @param tiquete El tiquete con el cliente actualizado.
-     * @throws SQLException si ocurre un error.
-     */
+
     public void actualizarClienteTiquete(Tiquete tiquete) throws SQLException {
         String sql = "UPDATE Tiquete SET login_cliente = ? WHERE id_tiquete_db = ?";
         
@@ -207,8 +191,132 @@ public class TiqueteDAO {
         }
     }
 
-    // TODO:
-    // public List<Tiquete> cargarTodosLosTiquetes(List<Usuario> todosUsuarios, List<Localidades> todasLocalidades, List<Evento> todosEventos)
-    // Este método es GIGANTESCO. Usaría múltiples JOINS para reconstruir
-    // todos los tiquetes (Basico, Deluxe, Multiple) y sus listas.
+    public List<Tiquete> cargarTodosLosTiquetes(
+            Map<String, Usuario> mapaUsuarios,
+            Map<Integer, Localidades> mapaLocalidades,
+            Map<String, Evento> mapaEventos) throws SQLException {
+        
+        // Fase 1: Cargar todos los tiquetes y ponerlos en un mapa
+        Map<Integer, Tiquete> mapaTiquetes = new HashMap<>(); // ID_DB -> Tiquete
+        
+        String sql = "SELECT t.*, " +
+                     "       b.numero_asiento, " +
+                     "       d.id_tiquete_db AS is_deluxe, " +
+                     "       m.id_tiquete_db AS is_multiple " +
+                     "FROM Tiquete t " +
+                     "LEFT JOIN Basico b ON t.id_tiquete_db = b.id_tiquete_db " +
+                     "LEFT JOIN Deluxe d ON t.id_tiquete_db = d.id_tiquete_db " +
+                     "LEFT JOIN Multiple m ON t.id_tiquete_db = m.id_tiquete_db";
+
+        Connection conn = null;
+        Statement stmt = null;
+        ResultSet rs = null;
+        
+        try {
+            conn = ConexionSQLite.conectar();
+            stmt = conn.createStatement();
+            rs = stmt.executeQuery(sql);
+
+            while (rs.next()) {
+                // 1. Leer datos de la tabla Tiquete (Padre)
+                int id_db = rs.getInt("id_tiquete_db");
+                String id_java = rs.getString("id_tiquete_java");
+                double pBase = rs.getDouble("precio_base");
+                double pServicio = rs.getDouble("costo_servicio");
+                double pEmision = rs.getDouble("costo_emision");
+                double pFinal = rs.getDouble("precio_final");
+                String fecha = rs.getString("fecha");
+                String estado = rs.getString("estado");
+                boolean transferible = rs.getBoolean("transferible");
+                
+                // 2. Hidratar los objetos FK
+                Usuario cliente = mapaUsuarios.get(rs.getString("login_cliente"));
+                Localidades loc = mapaLocalidades.get(rs.getInt("id_localidad"));
+                Evento evt = mapaEventos.get(rs.getString("id_evento"));
+                
+                Tiquete tiquete = null;
+
+                // 3. Decidir qué tipo de tiquete crear
+                if (rs.getObject("is_multiple") != null) {
+                    tiquete = Multiple.cargarDesdeDB(id_db, id_java, pBase, pServicio, pEmision, pFinal, fecha, estado, transferible, cliente, new ArrayList<>(), new ArrayList<>());
+                } else if (rs.getObject("is_deluxe") != null) {
+                    tiquete = Deluxe.cargarDesdeDB(id_db, id_java, pBase, pServicio, pEmision, pFinal, fecha, estado, transferible, cliente, loc, evt, new ArrayList<>());
+                } else {
+                    String numAsiento = rs.getString("numero_asiento");
+                    tiquete = Basico.cargarDesdeDB(id_db, id_java, pBase, pServicio, pEmision, pFinal, fecha, estado, transferible, cliente, loc, evt, numAsiento);
+                }
+                
+                if (tiquete != null) {
+                    mapaTiquetes.put(id_db, tiquete);
+                }
+            }
+        } finally {
+            if (rs != null) rs.close();
+            if (stmt != null) stmt.close();
+            // Dejamos la conexión abierta para la Fase 2
+        }
+
+        // --- Fase 2: Hidratar las Listas ---
+        try {
+            hidratarBeneficios(conn, mapaTiquetes);
+            hidratarTiquetesIncluidos(conn, mapaTiquetes);
+            hidratarEventosAsociados(conn, mapaTiquetes, mapaEventos);
+        } finally {
+            if (conn != null) conn.close();
+        }
+        
+        // Devolvemos los valores del mapa como una lista
+        return new ArrayList<>(mapaTiquetes.values());
+    }
+
+    // --- Helpers de Hidratación ---
+    
+    private void hidratarBeneficios(Connection conn, Map<Integer, Tiquete> mapaTiquetes) throws SQLException {
+        String sql = "SELECT * FROM Deluxe_Beneficios";
+        try (Statement stmt = conn.createStatement(); ResultSet rs = stmt.executeQuery(sql)) {
+            while (rs.next()) {
+                int id_tiquete_db = rs.getInt("id_tiquete_db");
+                String beneficio = rs.getString("beneficio_desc");
+                
+                Deluxe tiqueteDeluxe = (Deluxe) mapaTiquetes.get(id_tiquete_db);
+                if (tiqueteDeluxe != null) {
+                    tiqueteDeluxe.getBeneficiosAdicionales().add(beneficio);
+                }
+            }
+        }
+    }
+
+    private void hidratarTiquetesIncluidos(Connection conn, Map<Integer, Tiquete> mapaTiquetes) throws SQLException {
+        String sql = "SELECT * FROM Multiple_TiquetesIncluidos";
+        try (Statement stmt = conn.createStatement(); ResultSet rs = stmt.executeQuery(sql)) {
+            while (rs.next()) {
+                int id_multiple = rs.getInt("id_tiquete_multiple");
+                int id_incluido = rs.getInt("id_tiquete_incluido");
+                
+                Multiple tiqueteMultiple = (Multiple) mapaTiquetes.get(id_multiple);
+                Tiquete tiqueteIncluido = mapaTiquetes.get(id_incluido);
+                
+                if (tiqueteMultiple != null && tiqueteIncluido != null) {
+                    tiqueteMultiple.getTiquetesIncluidos().add(tiqueteIncluido);
+                }
+            }
+        }
+    }
+
+    private void hidratarEventosAsociados(Connection conn, Map<Integer, Tiquete> mapaTiquetes, Map<String, Evento> mapaEventos) throws SQLException {
+        String sql = "SELECT * FROM Multiple_EventosAsociados";
+        try (Statement stmt = conn.createStatement(); ResultSet rs = stmt.executeQuery(sql)) {
+            while (rs.next()) {
+                int id_multiple = rs.getInt("id_tiquete_multiple");
+                String id_evento = rs.getString("id_evento");
+                
+                Multiple tiqueteMultiple = (Multiple) mapaTiquetes.get(id_multiple);
+                Evento evento = mapaEventos.get(id_evento);
+                
+                if (tiqueteMultiple != null && evento != null) {
+                    tiqueteMultiple.getEventosAsociados().add(evento);
+                }
+            }
+        }
+    }
 }

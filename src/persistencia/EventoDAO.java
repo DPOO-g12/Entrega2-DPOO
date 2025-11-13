@@ -17,12 +17,6 @@ import java.util.List;
  */
 public class EventoDAO {
 
-    /**
-     * Guarda un nuevo Evento en la base de datos.
-     *
-     * @param evento El objeto Evento a guardar.
-     * @throws SQLException si ocurre un error de SQL.
-     */
     public void guardarEvento(Evento evento) throws SQLException {
         // El SQL para insertar en la tabla Evento
         String sql = "INSERT INTO Evento (id_evento, nombre, fecha, estado, id_venue, login_organizador) VALUES (?, ?, ?, ?, ?, ?)";
@@ -90,37 +84,34 @@ public class EventoDAO {
              Statement stmt = conn.createStatement();
              ResultSet rs = stmt.executeQuery(sql)) {
 
-            while (rs.next()) {
+        	while (rs.next()) {
                 // Leemos los datos de la fila
                 String id_evento = rs.getString("id_evento");
                 String nombre = rs.getString("nombre");
                 String fecha = rs.getString("fecha");
                 String estado = rs.getString("estado");
                 
-                // Leemos las Claves Foráneas (los IDs)
                 int id_venue_fk = rs.getInt("id_venue");
                 String login_organizador_fk = rs.getString("login_organizador");
 
                 // --- "Hidratación" ---
-                // Buscamos los objetos completos en las listas que nos pasaron
                 Venue venue = findVenueById(todosVenues, id_venue_fk);
                 OrganizadorEventos promotor = findOrganizadorByLogin(todosOrganizadores, login_organizador_fk);
 
-                // Validamos que los datos sean íntegros
                 if (venue == null) throw new SQLException("Datos corruptos: El Venue con ID " + id_venue_fk + " no existe.");
                 if (promotor == null) throw new SQLException("Datos corruptos: El Organizador '" + login_organizador_fk + "' no existe.");
 
-                // Creamos el objeto Evento
-                Evento evento = new Evento(id_evento, nombre, fecha, venue, promotor);
-                evento.setEstado(estado); // Aplicamos el estado guardado
+                // --- ¡EL ARREGLO! ---
+                // Usamos la "fábrica" que no llama a la lógica de negocio
+                Evento evento = Evento.cargarDesdeDB(id_evento, nombre, fecha, venue, promotor, estado);
                 
                 eventos.add(evento);
             }
-        } catch (Exception e) {
-            // Capturamos la excepción del constructor de Evento (VenueOcupado, etc.)
-            // Aunque al Cargar, no debería pasar.
-            throw new SQLException("Error al cargar evento: " + e.getMessage());
+            
+        } catch (SQLException e) {
+             throw new SQLException("Error al cargar evento: " + e.getMessage());
         }
+ 
         
         return eventos;
     }
