@@ -3,10 +3,15 @@ package marketplace;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 import cliente.Administrador;
+import cliente.Usuario;
 import cliente.UsuarioComprador;
+import excepciones.AutenticacionFallidaException;
+import excepciones.TiqueteNoTransferibleException;
+import tiquetes.Tiquete;
 
 public class Marketplace {
 
@@ -34,7 +39,7 @@ public class Marketplace {
 	public void aceptarContraoferta(ContraOferta contraoferta) {
 		contraoferta.setEstado("ACEPTADA");
 		registrarLog("Contraoferta aceptada para la oferta " + contraoferta.getOfertaOriginal().getId());
-
+		contraoferta.getOfertaOriginal().setActiva(false);
 	}
 
 	private void registrarLog(String descripcion) {
@@ -53,7 +58,7 @@ public class Marketplace {
 		}
 	}
 
-	public void concretarVenta(OfertaMarketplace oferta, UsuarioComprador comprador, Double precioFinal) {
+	public void concretarVenta(OfertaMarketplace oferta, UsuarioComprador comprador, Double precioFinal) throws AutenticacionFallidaException, TiqueteNoTransferibleException, Exception {
 		if (!oferta.isActiva()) {
 			registrarLog("Intento de compra fallido: la oferta " + oferta.getId() + " ya no está activa.");
 			return;
@@ -70,16 +75,27 @@ public class Marketplace {
 		vendedor.setSaldo(vendedor.getSaldo() + precioFinal);
 
 		oferta.setActiva(false);
+		
+		List<Usuario> listaUsuarios = new ArrayList<>();
+		listaUsuarios.add(comprador);
 
 		registrarLog("Venta concretada: " + comprador.getLogIn() + " compró la boleta de " + vendedor.getLogIn()
 				+ " por $" + precioFinal);
+		
+		oferta.getVendedor().transferirTiquete(oferta.getTiquete(), oferta.getVendedor().getLogIn(), comprador.getContrasena(), listaUsuarios);
 	}
 
-	public void concretarVentaContraOferta(ContraOferta contraoferta) {
+	public void concretarVentaContraOferta(ContraOferta contraoferta) throws AutenticacionFallidaException, TiqueteNoTransferibleException, Exception {
 		concretarVenta(contraoferta.getOfertaOriginal(), contraoferta.getComprador(), contraoferta.getNuevoPrecio());
 		contraoferta.setEstado("ACEPTADA");
 		registrarLog(
 				"Contraoferta aceptada y venta concretada sobre oferta " + contraoferta.getOfertaOriginal().getId());
-	}
+		
+		List<Usuario> listaUsuarios = new ArrayList<>();
+		listaUsuarios.add(contraoferta.getComprador());
+		contraoferta.getComprador().transferirTiquete(contraoferta.getOfertaOriginal().getTiquete(), contraoferta.getOfertaOriginal().getVendedor().getContrasena(), contraoferta.getComprador().getLogIn(), listaUsuarios);
+	}	
+	
+		
 
 }
