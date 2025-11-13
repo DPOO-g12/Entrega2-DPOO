@@ -9,6 +9,7 @@ import tiquetes.Tiquete;
 import localidades.Localidades;
 import excepciones.AutenticacionFallidaException;
 import excepciones.CapacidadExcedidaLocalidad;
+import excepciones.FondosInsuficientesException;
 import excepciones.TiqueteNoTransferibleException;
 import tiquetes.Basico;
 
@@ -37,7 +38,7 @@ public class UsuarioComprador extends Usuario {
 
 
 	@Override
-	public List<Tiquete> comprarTiquete(Localidades localidad, int cantidad, double porcentajeServicio, double cobroEmision ) throws CapacidadExcedidaLocalidad{
+	public List<Tiquete> comprarTiquete(Localidades localidad, int cantidad, double porcentajeServicio, double cobroEmision ) throws CapacidadExcedidaLocalidad, FondosInsuficientesException{
 		double precioBaseUnitario = localidad.getPrecioFinal();
 		double costoServicioUnitario = precioBaseUnitario * porcentajeServicio;
 		double precioFinalunitario = precioBaseUnitario + costoServicioUnitario + cobroEmision;
@@ -53,6 +54,12 @@ public class UsuarioComprador extends Usuario {
 	         + " Crack.! :(");
 	    }
 		
+		if (this.saldo < costoTotalTransaccion) {
+			
+			throw new FondosInsuficientesException ("No cuenta con los fondos suficientes para realizar la compra");
+
+		}
+
 		this.saldo = saldo - costoTotalTransaccion;
 		
 		List<String> asientosAsignados = localidad.venderTiquetes(cantidad); // si es NUmerada tiene uun asiento si no es una lista de NULL. 

@@ -43,6 +43,11 @@ public class Oferta {
 		return descuento;
 	}
 	
+	public OrganizadorEventos getPromotor() {
+		return promotor;
+
+	}
+	
 	
 
 
