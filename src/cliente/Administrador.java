@@ -132,51 +132,54 @@ public class Administrador extends Usuario {
 	    }
 	}
 	
-	public Map<String, Double> calcularGanancias( List<Tiquete> todosLosTiquetesVendidos, List<Evento> todosLosEventos) {
-		    
-		    Map<String, Double> reporte = new HashMap<>();
-		    double gananciasTotales = 0.0;
+	public Map<String, Double> calcularGanancias(List<Tiquete> todosLosTiquetesVendidos, List<Evento> todosLosEventos) {
+	    
+	    Map<String, Double> reporte = new HashMap<>();
+	    double gananciasTotales = 0.0;
 
-		    // Mapa para guardar ganancias por organizador
-		    Map<OrganizadorEventos, Double> gananciasPorOrganizador = new HashMap<>();
+	    // Mapa para guardar ganancias por organizador
+	    Map<OrganizadorEventos, Double> gananciasPorOrganizador = new HashMap<>();
 
-		    // Iteramos sobre TODOS los tiquetes vendidos
-		    for (Tiquete tiquete : todosLosTiquetesVendidos) {
-		        
-		        String estado = tiquete.getEstado();
-		        
-		        if (!estado.equals("CORTESIA") && !estado.equals("REEMBOLSADO")) {
-		            
-		            double gananciaEsteTiquete = tiquete.getCostoServicio() + tiquete.getCostoEmision();
-		            
-		            //Sumar a las ganancias totales
-		            gananciasTotales += gananciaEsteTiquete;
-		            
-		            //Sumar a las ganancias por evento
-		            Evento evento = tiquete.getEvento();
-		            if (evento != null) {
-		                String claveEvento = "GANANCIA_EVT_" + evento.getNombre();
-		                double gananciaEventoActual = reporte.getOrDefault(claveEvento, 0.0);
-		                reporte.put(claveEvento, gananciaEventoActual + gananciaEsteTiquete);
-		                
-		                //Sumar a las ganancias por organizador
-		                OrganizadorEventos promotor = evento.getPromotor();
-		                double gananciaPromotorActual = gananciasPorOrganizador.getOrDefault(promotor, 0.0);
-		                gananciasPorOrganizador.put(promotor, gananciaPromotorActual + gananciaEsteTiquete);
-		            }
-		        }
-		    }
+	    // Iteramos sobre TODOS los tiquetes vendidos
+	    for (Tiquete tiquete : todosLosTiquetesVendidos) {
+	        
+	        String estado = tiquete.getEstado();
+	        
+	        // CORRECCIÓN: Excluir CORTESIA, REEMBOLSADO y PENDIENTE_REEMBOLSO
+	        if (!estado.equals("CORTESIA") && !estado.equals("REEMBOLSADO") && !estado.equals("PENDIENTE_REEMBOLSO")) {
+	            
+	            double gananciaEsteTiquete = tiquete.getCostoServicio() + tiquete.getCostoEmision();
+	            
+	            // Sumar a las ganancias totales
+	            gananciasTotales += gananciaEsteTiquete;
+	            
+	            // Sumar a las ganancias por evento
+	            Evento evento = tiquete.getEvento();
+	            if (evento != null) {
+	                String claveEvento = "GANANCIA_EVT_" + evento.getNombre();
+	                double gananciaEventoActual = reporte.getOrDefault(claveEvento, 0.0);
+	                reporte.put(claveEvento, gananciaEventoActual + gananciaEsteTiquete);
+	                
+	                // Sumar a las ganancias por organizador
+	                OrganizadorEventos promotor = evento.getPromotor();
+	                double gananciaPromotorActual = gananciasPorOrganizador.getOrDefault(promotor, 0.0);
+	                gananciasPorOrganizador.put(promotor, gananciaPromotorActual + gananciaEsteTiquete);
+	            }
+	        }
+	    }
 
-		    // Guardar las ganancias totales
-		    reporte.put("GANANCIA_TOTAL_TIQUETERA", gananciasTotales);
+	    // Guardar las ganancias totales
+	    reporte.put("GANANCIA_TOTAL_TIQUETERA", gananciasTotales);
 
-		    // Guardar las ganancias por organizador en el reporte principal
-		    for (Map.Entry<OrganizadorEventos, Double> entry : gananciasPorOrganizador.entrySet()) {
-		        String clavePromotor = "GANANCIA_PROMOTOR_" + entry.getKey().getLogIn();
-		        reporte.put(clavePromotor, entry.getValue());
-		    }
-		    return reporte;
-		}
+	    // Guardar las ganancias por organizador en el reporte principal
+	    for (Map.Entry<OrganizadorEventos, Double> entry : gananciasPorOrganizador.entrySet()) {
+	        String clavePromotor = "GANANCIA_PROMOTOR_" + entry.getKey().getLogIn();
+	        reporte.put(clavePromotor, entry.getValue());
+	    }
+
+	    return reporte;
+	}
+
 	
 	@Override
 	public void transferirTiquete(Tiquete tiquete,String passwordConfirmacion, String loginDestinatario, List<Usuario> todosLosUsuarios) {

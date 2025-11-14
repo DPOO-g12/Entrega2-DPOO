@@ -47,14 +47,11 @@ public class OrganizadorEventos extends Usuario {
 		        this
 		    );
 		    
-		  
+
 		    this.eventosOrganizados.add(nuevoEvento);
 		    return nuevoEvento;
 		}
 
-
-	
-	
 	public Map<String, Double> calcularEstadoFinanciero(List<Tiquete> todosLosTiquetesVendidos) {
 	    
 	    Map<String, Double> reporte = new HashMap<>();
@@ -82,7 +79,8 @@ public class OrganizadorEventos extends Usuario {
 	                
 	                if (tiquete.getLocalidad() != null && tiquete.getLocalidad().equals(loc)) {
 	                    
-	                    if (!tiquete.getEstado().equals("CORTESIA")) {
+	                    // CORRECCIÓN: Excluir CORTESIA Y REEMBOLSADO de las ganancias
+	                    if (!tiquete.getEstado().equals("CORTESIA") && !tiquete.getEstado().equals("REEMBOLSADO")) {
 	                        gananciasPorLocalidad += tiquete.getPrecioBase();
 	                    }
 	                   
@@ -92,7 +90,7 @@ public class OrganizadorEventos extends Usuario {
 
 	            // Calcular porcentaje de venta de la localidad
 	            double porcVentaLoc = (tiquetesDisponiblesLocalidad == 0) ? 0.0 :
-	                ((double) tiquetesVendidosPorLocalidad / tiquetesDisponiblesLocalidad);
+	                    ((double) tiquetesVendidosPorLocalidad / tiquetesDisponiblesLocalidad);
 	            
 	            reporte.put("GANANCIA_LOC_" + loc.getNombreLocalidad(), gananciasPorLocalidad);
 	            reporte.put("PORCENTAJE_LOC_" + loc.getNombreLocalidad(), porcVentaLoc * 100.0);
@@ -103,9 +101,8 @@ public class OrganizadorEventos extends Usuario {
 	        }
 
 	        double porcVentaEvt = (tiquetesDisponiblesPorEvento == 0) ? 0.0 :
-	            ((double) tiquetesVendidosPorEvento / tiquetesDisponiblesPorEvento);
+	                ((double) tiquetesVendidosPorEvento / tiquetesDisponiblesPorEvento);
 	        
-
 	        reporte.put("GANANCIA_EVT_" + evento.getNombre(), gananciasPorEvento);
 	        reporte.put("PORCENTAJE_EVT_" + evento.getNombre(), porcVentaEvt * 100.0);
 
@@ -117,7 +114,7 @@ public class OrganizadorEventos extends Usuario {
 
 	    // Calcular porcentaje de venta global
 	    double porcVentaGlobal = (tiquetesDisponiblesGlobales == 0) ? 0.0 :
-	        ((double) tiquetesVendidosGlobales / tiquetesDisponiblesGlobales);
+	            ((double) tiquetesVendidosGlobales / tiquetesDisponiblesGlobales);
 
 	    // Guardar reporte global
 	    reporte.put("GANANCIA_GLOBAL", gananciasGlobales);
@@ -125,7 +122,7 @@ public class OrganizadorEventos extends Usuario {
 
 	    return reporte;
 	}
-	
+
 	
 	@Override
 	public List<Tiquete> comprarTiquete(Localidades localidad, int cantidad, double porcentajeServicio, double cobroEmision ) throws CapacidadExcedidaLocalidad, OperacionNoAutorizadaException {

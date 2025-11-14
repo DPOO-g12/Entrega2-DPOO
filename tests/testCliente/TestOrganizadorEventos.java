@@ -11,6 +11,7 @@ import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Map;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -26,9 +27,9 @@ import excepciones.CapacidadExcedidaLocalidad;
 import excepciones.FondosInsuficientesException;
 import excepciones.OperacionNoAutorizadaException;
 import excepciones.TiqueteNoTransferibleException;
-import excepciones.VenueOcupado;
 import localidades.Localidades;
 import localidades.NoNumerada;
+import tiquetes.Basico;
 import tiquetes.Multiple;
 import tiquetes.Tiquete;
 
@@ -53,7 +54,7 @@ public class TestOrganizadorEventos {
     
     @BeforeEach 
     
-    void setUp () throws VenueOcupado {
+    void setUp () throws Exception {
     	
     	organizador = new OrganizadorEventos(LOGIN_ORG, PASS_ORG, SALDO_INICIAL);
         otroOrganizador = new OrganizadorEventos("rival", "pass456", 0.0);
@@ -63,15 +64,33 @@ public class TestOrganizadorEventos {
         todosLosUsuarios = new ArrayList<>(Arrays.asList(organizador, otroOrganizador, comprador, administrador));
         
         venuePropio = new Venue("Estadio", "Centro", 200, null, "APROBADO");
+ 
         Venue venueAjeno = new Venue("Bar", "Sur", 50, null, "APROBADO"); 
+        
+        
+        //ARREGLO POR YO SOLITOO QUE ORGULLO
+        // PARA QUE EL TEST DE testCalcularEstadoFinancieroExhaustivo PUEDA SERVIR SE NECESITA QUE EL EVENTO QUEDE ASOCIADO A LISTA DEL ORG
+        // POR TANTO SE DEBE CREAR EL EVENTO A TRAVES DE EL METODO DE agregarEvento PARA QUE SE AÑADA A LA LISTA DEL ORG
+        // Y PARA QUE eventoPropio APUNTE AL MISMO OBJETO EN MEMORIA SE USA .get
 
-        eventoPropio = new Evento("E1", "Mi Show", FECHA, venuePropio, organizador);
+        organizador.agregarEvento("E1", "Mi Show", FECHA, venuePropio);
+        eventoPropio = organizador.getEventosOrganizados().get(0);
+        
+      
+        
         eventoAjeno = new Evento("E2", "Show Rival", "2026-12-02", venueAjeno, otroOrganizador);
         
-        localidadGeneral = new NoNumerada(PRECIO_BASE,10, "General", eventoPropio);
-        localidadVIP = new NoNumerada(PRECIO_BASE * 2, 5, "VIP", eventoPropio);
         eventoPropio.agregarLocalidadNoNumerada("General", PRECIO_BASE, 10);
         eventoPropio.agregarLocalidadNoNumerada("VIP", PRECIO_BASE * 2, 5);
+        
+        // cambios en localidad en vez de ser una instancia se llama a la localidad por un get
+        // para que en memoria apunte al mismo objeto 
+        
+        localidadGeneral = eventoPropio.getLocalidades().get("General");
+        localidadVIP = eventoPropio.getLocalidades().get("VIP");
+        
+        
+        
     	
     }
     
@@ -261,8 +280,70 @@ public class TestOrganizadorEventos {
 	   
 	   assertThrows (TiqueteNoTransferibleException.class, ()->
 	   organizador.transferirTiquete(cortesia, PASS_ORG, administrador.getLogIn(), todosLosUsuarios), "No se puede trasnferir un tiquete a un admin");
+
+   }
+   
+   // TEST PARA REPORTES FINANCIEROS 
+   
+   @Test
+   
+   void testCalcularEstadoFinancieroExhaustivo () throws CapacidadExcedidaLocalidad, OperacionNoAutorizadaException {
 	   
-	   // TEST PARA CALCULAR GANANCIA
+	   // T1: ACTIVO (Debe contar 100.0) - Localidad General
+       Tiquete t1_Activo = new Basico(100.0, 0.1, 5.0, FECHA, comprador, localidadGeneral, eventoPropio, "ACTIVO", null); 
+       
+       // T2: CORTESIA (Debe contar 0.0 en ganancias) - Localidad VIP (Base 200)
+       Tiquete t2_Cortesia = organizador.comprarTiquete(localidadVIP, 1, 0.1, 5.0).get(0);
+       
+       // T3: REEMBOLSADO (Debe contar 0.0 en ganancias - NUEVA LÓGICA) - Localidad General
+       Tiquete t3_Reembolsado = new Basico(100.0, 0.1, 5.0, FECHA, comprador, localidadGeneral, eventoPropio, "REEMBOLSADO", null); 
+       
+       // T4: TRANSFERIDO (Debe contar 200.0 en ganancias, es una venta pagada) - Localidad VIP
+       Tiquete t4_Transferido = new Basico(200.0, 0.1, 5.0, FECHA, comprador, localidadVIP, eventoPropio, "TRANSFERIDO", null);
+	   
+	   
+	   List<Tiquete> todosLosTiquetes = new ArrayList <> () ;
+	   
+	   todosLosTiquetes.add(t1_Activo);
+	   todosLosTiquetes.add(t2_Cortesia);
+	   todosLosTiquetes.add(t3_Reembolsado);
+	   todosLosTiquetes.add(t4_Transferido);
+	   
+	   Map <String, Double> reporte = organizador.calcularEstadoFinanciero(todosLosTiquetes);
+	   
+	   //Ganancia Localidad General: T1(100) + T3(0) = 100.0
+	   assertEquals (100, reporte.get("GANANCIA_LOC_General"), "Ganancia General debe ser 100.0 (solo Tiquete ACTIVO)");
+	   
+	   //Ganancia Localidad VIP: T2(0) + T4(200) = 200.0
+	   assertEquals (200.0, reporte.get("GANANCIA_LOC_VIP"),"Ganancia VIP debe ser 200.0 (solo Tiquete TRANSFERIDO).");
+	   
+	   //Ganancia Global: 100.0 (General) + 200.0 (VIP) = 300.0
+	   assertEquals (300.0, reporte.get("GANANCIA_GLOBAL"), "La ganancia global debe ser 300");
+	   
+	   // Tiquetes vendidos (contados): 4
+       // Capacidad Total: 15 (10 General + 5 VIP)
+       // Porcentaje Global: (4 / 15) * 100 = 26.666...%
+	   
+	   double expectedPorc = (4.0 / 15.0) * 100.0;
+	   
+	   assertEquals (expectedPorc, reporte.get("PORCENTAJE_VENTA_GLOBAL"),0.001, "Porcentaje global debe ser 26.66% basado en 4/15 ventas");
+
+   }
+   
+   @Test 
+   
+   void testCalcularEstadoFinancieroConLocalidadesVacias () {
+	//Test para asegurar que el cálculo maneja correctamente la división por cero (0/0)
+	   
+	   OrganizadorEventos orgVacio = new OrganizadorEventos ("empty", "pass", 0.0);
+	   
+	// Se ejecuta el reporte sobre sus eventos (que está vacío) y una lista de tiquetes vacía.
+	   
+	   Map<String, Double> reporte = orgVacio.calcularEstadoFinanciero(new ArrayList <> ());
+	   
+	   assertEquals (0.0, reporte.get("GANANCIA_GLOBAL"), "La ganancia debe ser 0");
+	   
+	   assertEquals (0.0, reporte.get("PORCENTAJE_VENTA_GLOBAL"), "El porcentaje de venta debe ser 0");
 	   
 	   
    }
