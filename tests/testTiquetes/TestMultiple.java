@@ -200,6 +200,36 @@ public class TestMultiple {
 		paquete.transferirUnoDeMisTiquetes("NO EXISTENTE", clienteDestinatario), "No se puede transferir un tiquete que no tengas");
 	}
 	
+	@Test
+    void testCargarDesdeDB() {
+        // Datos simulados de la BD
+        int idDB = 100;
+        String idJava = "MUL-12345";
+        double pBase = 1000.0;
+        double pServ = 0.0;
+        double pEmi = 0.0;
+        double pFinal = 1000.0;
+        String estadoDB = "ACTIVO";
+        boolean transferibleDB = true;
+        
+        // Llamamos al método estático (Fábrica)
+        Multiple paqueteRecuperado = Multiple.cargarDesdeDB(
+                idDB, idJava, pBase, pServ, pEmi, pFinal, 
+                FECHA, estadoDB, transferibleDB, 
+                clienteOriginal, tiquetesInternos, eventosAsociados
+        );
+        
+        // Verificaciones
+        assertEquals(idDB, paqueteRecuperado.getIdTiqueteDb()); // Asumiendo que tienes este getter en Tiquete
+        assertEquals(idJava, paqueteRecuperado.getIdTiquete());
+        assertEquals(pFinal, paqueteRecuperado.getPrecioFinal(), 0.001);
+        assertEquals("MULTIPLE", paqueteRecuperado.getTipoTiquete());
+        
+        // Verificar listas reconstruidas
+        assertEquals(2, paqueteRecuperado.getTiquetesIncluidos().size());
+        assertEquals(2, paqueteRecuperado.getEventosAsociados().size());
+    }
+	
 	
 	
 	

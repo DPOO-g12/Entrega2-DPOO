@@ -108,6 +108,34 @@ public class TestDeluxe {
 		
 	}
 	
+	@Test
+	void testCargarDesdeDB() {
+		// Datos simulados de BD
+		int idDB = 50;
+		String idJava = "TICKET-DELUXE-001";
+		double pBase = 300.0;
+		double pServ = 0.1;
+		double pEmision = 5.0;
+		double pFinal = 335.0;
+		String fechaDB = "2025-12-31";
+		String estadoDB = "ACTIVO";
+		boolean transferibleDB = false; // Deluxe siempre es false
+		
+		// Llamamos al método estático que queremos probar
+		Deluxe tiqueteRecuperado = Deluxe.cargarDesdeDB(idDB, idJava, pBase, pServ, pEmision, pFinal, 
+				fechaDB, estadoDB, transferibleDB, clienteOriginal, localidad, evento, beneficios);
+		
+		// Verificamos que los datos se asignaron correctamente
+		assertEquals(idDB, tiqueteRecuperado.getIdTiqueteDb());
+		assertEquals(idJava, tiqueteRecuperado.getIdTiquete());
+		assertEquals(pFinal, tiqueteRecuperado.getPrecioFinal(), 0.001);
+		assertFalse(tiqueteRecuperado.isTransferible()); // Confirmamos que recuperó el valor
+		
+		// Verificamos los beneficios
+		assertEquals(2, tiqueteRecuperado.getBeneficiosAdicionales().size());
+		assertTrue(tiqueteRecuperado.getBeneficiosAdicionales().contains("Acesso Backstage"));
+	}
+	
 	
 
 }

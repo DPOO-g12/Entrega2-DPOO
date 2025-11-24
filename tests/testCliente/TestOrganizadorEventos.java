@@ -6,6 +6,7 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 
 import java.time.LocalDateTime;
 import java.util.ArrayList;
@@ -348,7 +349,118 @@ public class TestOrganizadorEventos {
 	   
    }
    
+// -------------------------------------------------------------------
+   //  NUEVOS TESTS PARA SUBIR COBERTURA AL 100%
+   // -------------------------------------------------------------------
+
+   @Test
+   void testTransferenciaExitosaAOtroOrganizador() throws Exception {
+       // Cubre la línea: } else if (destinatario instanceof OrganizadorEventos) {
+       
+       // 1. Organizador compra una cortesía
+       Tiquete cortesia = organizador.comprarTiquete(localidadGeneral, 1, 0.1, 5.0).get(0);
+       
+       // 2. Transfiere esa cortesía a 'otroOrganizador' (definido en setUp)
+       organizador.transferirTiquete(cortesia, PASS_ORG, otroOrganizador.getLogIn(), todosLosUsuarios);
+       
+       // 3. Verificaciones
+       assertFalse(organizador.getTiquetesComprados().contains(cortesia), "El tiquete debe salir del origen");
+       assertTrue(otroOrganizador.getTiquetesComprados().contains(cortesia), "El tiquete debe llegar al otro organizador");
+       assertEquals("TRANSFERIDO", cortesia.getEstado());
+       assertSame(otroOrganizador, cortesia.getCliente());
+   }
+
+   @Test
+   void testTransferenciaFallaUsuarioNoEncontrado() {
+       // Cubre la línea: if (destinatario == null) { throw new Exception(...) }
+       
+       // 1. Organizador tiene un tiquete
+       Tiquete cortesia = null;
+       try {
+            cortesia = organizador.comprarTiquete(localidadGeneral, 1, 0.1, 5.0).get(0);
+       } catch (Exception e) { fail("No debió fallar la compra inicial"); }
+
+       Tiquete tiqueteFinal = cortesia; // Variable final o efectivamente final para la lambda
+       
+       // 2. Intentar transferir a un usuario que NO está en la lista 'todosLosUsuarios'
+       assertThrows(Exception.class, () -> 
+           organizador.transferirTiquete(tiqueteFinal, PASS_ORG, "usuario_fantasma", todosLosUsuarios),
+           "Debe lanzar Exception genérica si el usuario no se encuentra en la lista"
+       );
+   }
+
+   @Test
+   void testComprarTiqueteCortesiaFallaPorCapacidad() throws CapacidadExcedidaLocalidad {
+       // Cubre la línea: if (!localidad.verificarDisponibilidad(cantidad)) dentro del bloque de cortesía
+       
+       // 1. Llenar la localidad VIP (Capacidad 5)
+       // Simulamos que se vendieron todos los puestos
+       localidadVIP.venderTiquetes(5); 
+       
+       // 2. Intentar generar una cortesía en esa localidad llena
+       assertThrows(CapacidadExcedidaLocalidad.class, () ->
+           organizador.comprarTiquete(localidadVIP, 1, 0.1, 5.0),
+           "No se pueden generar cortesías si la localidad está llena"
+       );
+   }
+
+   @Test
+   void testCalcularEstadoFinancieroIgnoraTiquetesAjenos() throws Exception {
+       // Cubre la lógica implícita del bucle donde el tiquete no coincide con la localidad del organizador
+       
+       // 1. Tiquete propio (Cortesía)
+       Tiquete tiquetePropio = organizador.comprarTiquete(localidadGeneral, 1, 0.1, 5.0).get(0);
+       
+       // 2. Tiquete AJENO (De otro evento, creado manualmente para simular la lista global)
+       // Usamos 'eventoAjeno' que pertenece a 'otroOrganizador'
+       Localidades locAjena = new NoNumerada(500.0, 100, "Ajena", eventoAjeno);
+       Tiquete tiqueteAjeno = new Basico(500.0, 0.1, 5.0, FECHA, comprador, locAjena, eventoAjeno, "ACTIVO", null);
+       
+       List<Tiquete> listaMixta = new ArrayList<>();
+       listaMixta.add(tiquetePropio);
+       listaMixta.add(tiqueteAjeno);
+       
+       // 3. Calcular reporte
+       Map<String, Double> reporte = organizador.calcularEstadoFinanciero(listaMixta);
+       
+       // 4. Verificar que la ganancia global sea 0.0 (Propio es cortesía=0, Ajeno=Ignorado)
+       // Si sumara el ajeno, daría 500.0. Si funciona bien, da 0.0.
+       assertEquals(0.0, reporte.get("GANANCIA_GLOBAL"), 0.001, "No debe sumar ganancias de tiquetes que no son de sus eventos");
+   }
    
+
+   @Test 
+   
+   void testPedirRembolsoCambiaEstado() throws CapacidadExcedidaLocalidad, OperacionNoAutorizadaException, TiqueteNoTransferibleException {
+	   
+	   Tiquete cortesia = organizador.comprarTiquete(localidadGeneral, 1, 0.1, 5.0).get(0);
+	   
+	  cortesia.setEstado("ACTIVO");
+	  
+	  organizador.pedirRembolso(cortesia);
+	  
+	  
+	  assertEquals("PENDIENTE_REEMBOLSO", cortesia.getEstado(), "Si un org tiene un tiquete activo (que no deberia pasar),"
+	  		+ "y pide la cortesia esta debe cambiar de estado");
+	  
+	   
+	   
+	   
+   }
+   
+   @Test 
+   
+   void testTransferirTiqueteFallaSiNoContieneTiquete () throws AutenticacionFallidaException, TiqueteNoTransferibleException, Exception {
+	   
+	   Tiquete tiqueteAjeno = comprador.comprarTiquete(localidadGeneral, 1, 0.1, 5.0).get(0);
+	   
+	   
+	   
+	   assertThrows (TiqueteNoTransferibleException.class, ()->
+	   organizador.transferirTiquete(tiqueteAjeno, PASS_ORG, "client", todosLosUsuarios), 
+	   "No se debe transferir un tiquete que no te perteneces");
+	   
+   }
     	
     	
     

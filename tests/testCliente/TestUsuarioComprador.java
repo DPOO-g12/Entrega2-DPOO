@@ -229,6 +229,40 @@ public class TestUsuarioComprador {
             comprador.transferirTiquete(tiquete, PASSWORD, administrador.getLogIn(), todosLosUsuarios),
             "Debe fallar si el destinatario es un Administrador.");
     }
-	
+    
+    @Test
+    void testTransferenciaExitosaAOrganizador() throws Exception {
+        // 11. Transferencia a un ORGANIZADOR (Cubre el 'else if' que te falta)
+        Tiquete tiquete = comprador.comprarTiquete(localidadNoNumerada, 1, PORCENTAJE_SERVICIO, COBRO_EMISION).get(0);
+        
+        comprador.transferirTiquete(tiquete, PASSWORD, organizador.getLogIn(), todosLosUsuarios);
+        
+        assertFalse(comprador.getTiquetesComprados().contains(tiquete), "El tiquete debe ser removido del comprador");
+        assertTrue(organizador.getTiquetesComprados().contains(tiquete), "El tiquete debe ser agregado al organizador");
+        assertEquals("TRANSFERIDO", tiquete.getEstado());
+    }
+
+    @Test
+    void testTransferenciaFallaSiUsuarioNoExiste() throws Exception {
+        // 12. Transferir a un usuario que no está en la lista (Cubre el 'if destinatario == null')
+        Tiquete tiquete = comprador.comprarTiquete(localidadNoNumerada, 1, PORCENTAJE_SERVICIO, COBRO_EMISION).get(0);
+        
+        assertThrows(Exception.class, () ->
+            comprador.transferirTiquete(tiquete, PASSWORD, "usuario_fantasma", todosLosUsuarios),
+            "Debe fallar si el usuario destinatario no existe");
+    }
+    
+    @Test
+    void testTransferenciaFallaSiTiqueteNoPertenece() throws Exception {
+    	
+    	UsuarioComprador comprador2 = new UsuarioComprador("testuser2", "12344", SALDO_INICIAL);
+        Tiquete tiqueteAjeno = comprador2.comprarTiquete(localidadNoNumerada, 1, PORCENTAJE_SERVICIO, COBRO_EMISION).get(0);
+        
+        assertThrows(Exception.class, () ->
+            comprador.transferirTiquete(tiqueteAjeno, PASSWORD, "testuser2", todosLosUsuarios),
+            "Debe fallar si el tiquete no le pertenece");
+    }
+    
+   
 
 }

@@ -20,6 +20,7 @@ import excepciones.VenueOcupado;
 import localidades.Localidades;
 import localidades.NoNumerada;
 import tiquetes.Basico;
+import tiquetes.Tiquete;
 
 public class TestTiquete {
 	
@@ -167,6 +168,70 @@ public class TestTiquete {
         
         tiquete.setTransferible(false);
         assertFalse(tiquete.isTransferible(), "El estado debe ser el asigando por setter");
+    }
+	
+	@Test
+	void testGettersYSettersAdicionales() {
+		Basico tiquete = new Basico(PRECIO_BASE, PORCENTAJE_SERVICIO, COBRO_EMISION, FECHA, 
+                clienteOriginal, localidad, evento, "ACTIVO", "A-5");
+		
+		// Cubrir getCliente, getLocalidad, getEvento
+		assertSame(clienteOriginal, tiquete.getCliente());
+		assertSame(localidad, tiquete.getLocalidad());
+		assertSame(evento, tiquete.getEvento());
+		
+		// Cubrir setCliente
+		tiquete.setCliente(clienteDestinatario);
+		assertSame(clienteDestinatario, tiquete.getCliente(), "El cliente debió actualizarse.");
+		
+		// Cubrir setIdTiqueteDb
+		tiquete.setIdTiqueteDb(100);
+		assertEquals(100, tiquete.getIdTiqueteDb(), "El ID de DB debió actualizarse.");
+	}
+	
+	// ==========================================================================
+    // Clase interna auxiliar para probar el constructor protegido de la clase abstracta
+    // ==========================================================================
+    private static class TiqueteConcretoParaTest extends Tiquete {
+        public TiqueteConcretoParaTest(int id_db, String id_java, double pBase, double pServicio,
+                                       double pEmision, double pFinal, String fecha, String estado,
+                                       boolean transferible, cliente.Usuario cliente, localidades.Localidades loc, eventos.Evento evt) {
+            
+            // AQUÍ es donde se llama al constructor rojo de Tiquete
+            super(id_db, id_java, pBase, pServicio, pEmision, pFinal, fecha, estado, transferible, cliente, loc, evt);
+        }
+
+        @Override
+        public String getTipoTiquete() {
+            return "TEST";
+        }
+    }
+    
+    @Test
+    void testConstructorProtegidoParaDB() {
+        // Datos simulados
+        int idDB = 999;
+        String idJava = "TIQUETE-TEST-DB";
+        double pBase = 100.0;
+        double pServ = 10.0;
+        double pEmi = 5.0;
+        double pFinal = 115.0;
+        boolean transferible = true;
+        
+        // Instanciamos la clase "dummy" que llama al super() protegido
+        Tiquete tiqueteRecuperado = new TiqueteConcretoParaTest(
+                idDB, idJava, pBase, pServ, pEmi, pFinal, 
+                FECHA, "ACTIVO", transferible, 
+                clienteOriginal, localidad, evento
+        );
+        
+        // Verificaciones para asegurar que el constructor padre asignó todo bien
+        assertEquals(idDB, tiqueteRecuperado.getIdTiqueteDb()); // Asegúrate de tener este getter en Tiquete
+        assertEquals(idJava, tiqueteRecuperado.getIdTiquete());
+        assertEquals(pBase, tiqueteRecuperado.getPrecioBase(), 0.001);
+        assertEquals(pFinal, tiqueteRecuperado.getPrecioFinal(), 0.001);
+        assertEquals(transferible, tiqueteRecuperado.isTransferible());
+        assertSame(clienteOriginal, tiqueteRecuperado.getCliente());
     }
 	
 	

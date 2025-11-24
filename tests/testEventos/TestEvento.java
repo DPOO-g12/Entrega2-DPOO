@@ -151,5 +151,35 @@ public class TestEvento {
         assertEquals("CANCELADO", evento.getEstado(), "El estado debería cambiar a CANCELADO.");
     }
 	
+	@Test
+	void testGetters() throws VenueOcupado {
+		Evento evento = new Evento(ID_EVENTO, NOMBRE_EVENTO, FECHA_EVENTO, venueDisponible, promotor);
+		
+		assertEquals(NOMBRE_EVENTO, evento.getNombre(), "El nombre debe coincidir");
+		assertEquals(FECHA_EVENTO, evento.getFecha(), "La fecha debe coincidir");
+		assertEquals(venueDisponible, evento.getVenue(), "El venue debe ser el mismo objeto");
+		assertEquals(promotor, evento.getPromotor(), "El promotor debe ser el mismo objeto");
+		
+	}
+	
+	@Test
+	void testCargarDesdeDB() {
+		// Datos simulados de una Base de Datos
+		String idDB = "DB-999";
+		String nombreDB = "Evento Pasado";
+		String fechaDB = "2020-01-01";
+		String estadoDB = "FINALIZADO";
+		
+		// Llamamos al método estático
+		Evento eventoRecuperado = Evento.cargarDesdeDB(idDB, nombreDB, fechaDB, venueDisponible, promotor, estadoDB);
+		
+		// Verificamos que el objeto se creó correctamente con los datos "viejos"
+		assertEquals(idDB, eventoRecuperado.getId());
+		assertEquals(nombreDB, eventoRecuperado.getNombre());
+		assertEquals(fechaDB, eventoRecuperado.getFecha());
+		assertEquals(estadoDB, eventoRecuperado.getEstado());
+        // Verificar que el mapa de localidades se inicializó (no es nulo)
+        assertTrue(eventoRecuperado.getLocalidades() != null); 
+	}
 
 }

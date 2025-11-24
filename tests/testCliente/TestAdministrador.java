@@ -1,6 +1,8 @@
 package testCliente;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNull;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -236,7 +238,112 @@ public class TestAdministrador {
 		
 	}
 	
+	@Test
+    void testMetodosNoSoportados() throws Exception {
+        // 1. Cubrir comprarTiquete (retorna null)
+        assertNull(administrador.comprarTiquete(localidadA, 1, 0.1, 5.0), 
+            "El administrador no debe poder comprar tiquetes (retorna null).");
+
+        // 2. Cubrir pedirRembolso (vacío)
+        // Simplemente lo llamamos para que la línea de código se ejecute
+        administrador.pedirRembolso(tiqueteActivo); 
+        // No hay aserción porque el método no hace nada, pero ya cubrimos la línea.
+
+        // 3. Cubrir transferirTiquete (vacío)
+        administrador.transferirTiquete(tiqueteActivo, "pass", "destinatario", new ArrayList<>());
+        // Igual, solo ejecutamos para cobertura.
+    }
 	
+	@Test
+    void testCancelarEventoIncluyeTiquetesTransferidos() {
+        // Escenario: Cancelar un evento que tiene tiquetes ya transferidos
+        
+        // tiqueteTransferido es parte de eventoB_Org2 en el setUp
+        double saldoAntes = comprador.getSaldo();
+        // Regla Admin: Base (200) + Servicio (20) = 220 de reembolso
+        double reembolsoEsperado = tiqueteTransferido.getPrecioBase() + tiqueteTransferido.getCostoServicio();
+
+        administrador.cancelarEvento(eventoB_Org2, todosLosTiquetes, true); // true = Admin cancela
+
+        assertEquals("REEMBOLSADO", tiqueteTransferido.getEstado(), 
+            "Los tiquetes TRANSFERIDOS también deben ser reembolsados.");
+        
+        assertEquals(saldoAntes + reembolsoEsperado, comprador.getSaldo(), 0.001);
+    }
+	
+	@Test
+    void testGestionarReembolsoConNuloOInvalido() {
+        // 1. Probar con Null
+        double saldoAntes = comprador.getSaldo();
+        administrador.gestionarReembolso(null, true);
+        assertEquals(saldoAntes, comprador.getSaldo(), "El saldo no debe cambiar si el tiquete es null");
+
+        // 2. Probar con Tiquete que NO es PENDIENTE (ya cubierto en tests anteriores, pero reforzamos)
+        administrador.gestionarReembolso(tiqueteActivo, true);
+        assertEquals("ACTIVO", tiqueteActivo.getEstado());
+    }
+	
+	@Test
+    void testGestionarSiEsMenorA0() {
+		
+		Tiquete tiqueteActivoPrecio0= new Basico(0, 0, 0, "2027-01-01", comprador, localidadA, eventoA_Org1, "ACTIVO", null);
+		
+		tiqueteActivoPrecio0.setEstado("PENDIENTE_REEMBOLSO");
+        
+        double saldoAntes = comprador.getSaldo();
+        administrador.gestionarReembolso(tiqueteCortes, true);
+        assertEquals(saldoAntes, comprador.getSaldo(), "El saldo no debe cambiar Si el monto a reembolsar es 0");
+
+    }
+	
+	@Test
+    void testCancelarEventoIgnoraTiquetesDeOtrosEventos() {
+        // Escenario: Cancelar Evento A, pero en la lista hay un tiquete del Evento B
+        // tiqueteTransferido pertenece a eventoB_Org2
+        
+        String estadoOriginal = tiqueteTransferido.getEstado(); // "TRANSFERIDO"
+        
+        // Cancelamos el Evento A (eventoA_Org1)
+        administrador.cancelarEvento(eventoA_Org1, todosLosTiquetes, true);
+        
+        // Verificación: El tiquete del Evento B NO debe haber cambiado
+        assertEquals(estadoOriginal, tiqueteTransferido.getEstado(), 
+            "El tiquete de otro evento no debe ser afectado por la cancelación.");
+    }
+	
+	@Test
+    void testCancelarEventoIgnoraTiquetesYaReembolsadosOCortesias() {
+        // Escenario: Tiquete que ya fue reembolsado o es cortesía no debe procesarse de nuevo
+        // tiqueteReembolsado ya es "REEMBOLSADO" en el setUp
+        
+        double saldoAntes = comprador.getSaldo();
+        
+        administrador.cancelarEvento(eventoA_Org1, todosLosTiquetes, true);
+        
+        // El saldo no debe aumentar por el tiquete que ya estaba reembolsado
+        // Solo debe aumentar por el tiqueteActivo (que sí se cancela ahora)
+        double reembolsoSoloActivo = tiqueteActivo.getPrecioBase() + tiqueteActivo.getCostoServicio();
+        
+        assertEquals(saldoAntes + reembolsoSoloActivo, comprador.getSaldo(), 0.001, 
+            "Solo se debe reembolsar el tiquete ACTIVO, ignorando el que ya era REEMBOLSADO.");
+    }
+	
+	@Test
+    void testCalcularGananciasConTiqueteSinEvento() {
+        // Escenario: Un tiquete corrupto que perdió su referencia al evento
+        Tiquete tiqueteHuerfano = new Basico(100.0, 0.1, 5.0, "2025", comprador, localidadA, null, "ACTIVO", null); // Evento NULL
+        
+        List<Tiquete> listaConHuerfano = new ArrayList<>();
+        listaConHuerfano.add(tiqueteHuerfano);
+        
+        Map<String, Double> reporte = administrador.calcularGanancias(listaConHuerfano, new ArrayList<>());
+        
+        // Debe sumar la ganancia total a la tiquetera...
+        assertEquals(15.0, reporte.get("GANANCIA_TOTAL_TIQUETERA"), 0.001);
+        
+        // ...pero NO debe explotar ni sumar a ningún evento específico (el mapa de eventos estará vacío)
+        assertFalse(reporte.containsKey("GANANCIA_EVT_null"));
+    }
 	
 	
 

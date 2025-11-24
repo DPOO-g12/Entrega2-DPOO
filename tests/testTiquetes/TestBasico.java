@@ -2,6 +2,7 @@ package testTiquetes;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -68,5 +69,34 @@ public class TestBasico {
     	
     	assertNull (tiqueteNoAsiento.getNumeroAsiento(), "El asiento puede ser nulo en localidades no numeradas");
     }
+    
+    @Test
+	void testCargarDesdeDB() {
+		// Datos simulados de BD
+		int idDB = 20;
+		String idJava = "BASICO-ABC-123";
+		double pBase = 100.0;
+		double pServ = 0.1;
+		double pEmi = 2.0;
+		double pFinal = 112.0;
+		String fechaDB = "2025-12-25";
+		String estadoDB = "ACTIVO";
+		boolean transferibleDB = true;
+		String asientoDB = "A-1";
+		
+		// Ejecutar el método estático
+		Basico tiqueteRecuperado = Basico.cargarDesdeDB(
+				idDB, idJava, pBase, pServ, pEmi, pFinal, 
+				fechaDB, estadoDB, transferibleDB, 
+				cliente, localidad, evento, asientoDB);
+		
+		// Verificar reconstrucción
+		assertEquals(idDB, tiqueteRecuperado.getIdTiqueteDb());
+		assertEquals(idJava, tiqueteRecuperado.getIdTiquete());
+		assertEquals(pFinal, tiqueteRecuperado.getPrecioFinal(), 0.001);
+		assertEquals(asientoDB, tiqueteRecuperado.getNumeroAsiento());
+		assertEquals("BASICO", tiqueteRecuperado.getTipoTiquete());
+		assertTrue(tiqueteRecuperado.isTransferible());
+	}
 
 }

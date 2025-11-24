@@ -17,24 +17,17 @@ public class UsuarioComprador extends Usuario {
 	
 	
 	private List<Tiquete> tiquetesComprados;
-	
-	
 
-
+	
 	public UsuarioComprador(String logIn, String contrasena, double saldo) {
 		super(logIn, contrasena, saldo);
 		this.tiquetesComprados = new ArrayList<>();
 	}
 
-	
-	
-	
+
 	public List<Tiquete> getTiquetesComprados() {
 		return tiquetesComprados;
 	}
-
-
-
 
 
 	@Override
