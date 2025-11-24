@@ -7,6 +7,10 @@ import localidades.*;
 import persistencia.*;
 import tiquetes.*;
 import excepciones.*;
+import marketplace.Marketplace;
+import marketplace.OfertaReventa; // <--- Asegúrate de tener este
+import persistencia.MarketplaceDAO;
+
 
 import java.sql.SQLException;
 import java.util.ArrayList;
@@ -28,6 +32,7 @@ public class TiqueteraApp {
     private Usuario usuarioActual;
     private Administrador admin;
    
+    private marketplace.Marketplace marketplace;
     
     
     // --- DAOs (Los "Traductores" a la BD) ---
@@ -55,6 +60,7 @@ public class TiqueteraApp {
         this.eventoDAO = new EventoDAO();
         this.localidadDAO = new LocalidadDAO();
         this.tiqueteDAO = new TiqueteDAO();
+        this.marketplace = new marketplace.Marketplace();
         
         // Inicializar el scanner
         this.usuarioActual = null;
@@ -176,6 +182,18 @@ public class TiqueteraApp {
                  System.err.println("¡ADVERTENCIA! No se encontró ningún Administrador en la BD. Los cargos no se aplicarán.");
             }
             
+            System.out.println("Cargando Marketplace...");
+            persistencia.MarketplaceDAO marketDAO = new persistencia.MarketplaceDAO();
+            
+            // Cargar Logs
+            List<String> logsGuardados = marketDAO.cargarLogs();
+            this.marketplace.setLogDeRegistros(logsGuardados);
+            
+            // Cargar Ofertas (Necesita las listas maestras para reconstruir los objetos)
+            marketDAO.cargarOfertas(this.marketplace, this.usuarios, this.tiquetesVendidos);
+            
+            System.out.println("Marketplace listo.");
+            
             System.out.println("¡Carga de datos completada!");
 
         } catch (SQLException e) {
@@ -265,6 +283,7 @@ public class TiqueteraApp {
                 return;
             }
 
+            
             // 3. Llamar a la Lógica de Negocio (Paso 2)
             // El saldo inicial siempre es 0 al registrarse
             UsuarioComprador nuevoComprador = new UsuarioComprador(login, password, 0.0);
@@ -317,7 +336,7 @@ public class TiqueteraApp {
         System.out.println("2. Aprobar Venue Pendiente");
         System.out.println("3. Crear Nuevo Organizador"); 
         System.out.println("4. Ver Reporte de Ganancias"); 
-        System.out.println("5. Cancelar Evento (Próximamente)"); 
+        System.out.println("5. Cancelar Evento"); 
         System.out.println("0. Cerrar Sesión");
         System.out.print("Elige una opción: ");
 
@@ -343,7 +362,7 @@ public class TiqueteraApp {
             	logicaAdminVerReporte(scanner);
                 break;
             case 5: // 
-                System.out.println("Opción en construcción.");
+            	logicaAdminCancelarEvento(scanner);
                 break;
             case 0:
                 cerrarSesion();
@@ -469,6 +488,93 @@ public class TiqueteraApp {
             System.err.println("Error de Base de Datos al actualizar el venue: " + e.getMessage());
         }
     }
+    
+    public void logicaAdminCancelarEvento(Scanner scanner) {
+        System.out.println("\n--- 5. Cancelar Evento (Reembolso Automático) ---");
+        
+        try {
+            // 1. Filtrar eventos que estén ACTIVOS
+            List<Evento> eventosCancelables = new ArrayList<>();
+            for (Evento e : this.eventos) {
+                // Aseguramos que no sea nulo y sea ACTIVO
+                if (e.getEstado() != null && e.getEstado().equalsIgnoreCase("ACTIVO")) {
+                    eventosCancelables.add(e);
+                }
+            }
+
+            if (eventosCancelables.isEmpty()) {
+                System.out.println("No hay eventos activos que se puedan cancelar.");
+                return;
+            }
+
+            // 2. Mostrar lista
+            System.out.println("Seleccione el evento a cancelar:");
+            for (int i = 0; i < eventosCancelables.size(); i++) {
+                Evento e = eventosCancelables.get(i);
+                System.out.println("  " + (i + 1) + ". " + e.getNombre() + " (Fecha: " + e.getFecha() + ")");
+            }
+
+            System.out.print("Opción (0 para volver): ");
+            int opcion = Integer.parseInt(scanner.nextLine());
+            if (opcion == 0) return;
+            
+            if (opcion < 1 || opcion > eventosCancelables.size()) {
+                System.err.println("Opción inválida.");
+                return;
+            }
+
+            Evento eventoSeleccionado = eventosCancelables.get(opcion - 1);
+
+            // 3. Confirmación de seguridad
+            System.out.println("¡ADVERTENCIA! Esto cancelará el evento y reembolsará a todos los usuarios.");
+            System.out.print("Escribe 'CONFIRMAR' para proceder: ");
+            String confirmacion = scanner.nextLine();
+            
+            if (!confirmacion.equals("CONFIRMAR")) {
+                System.out.println("Operación cancelada.");
+                return;
+            }
+
+            // 4. Lógica de Negocio (En memoria)
+            System.out.println("Procesando cancelación y reembolsos...");
+            Administrador admin = (Administrador) this.usuarioActual;
+            
+            // true = Es admin, por lo que reembolsa Precio Base + Servicio (según tu lógica)
+            admin.cancelarEvento(eventoSeleccionado, this.tiquetesVendidos, true);
+
+            // 5. Persistencia (Guardar cambios en BD)
+            System.out.println("Guardando cambios en la base de datos...");
+
+            // A. Actualizar estado del Evento
+            // Asumo que tienes un método para actualizar el evento, si no, avísame.
+            // Si no tienes actualizarEstadoEvento, intenta con guardarEvento si tu DAO soporta "UPDATE" o "REPLACE"
+            // O agrega un método simple en EventoDAO: updateEventStatus(String id, String status)
+            // Por ahora intentaré usar una lógica genérica o un método que deberías tener:
+            this.eventoDAO.guardarEvento(eventoSeleccionado); // O this.eventoDAO.actualizarEstado(eventoSeleccionado)
+
+            // B. Actualizar Tiquetes y Saldos
+            // Recorremos la lista global para encontrar los afectados
+            for (Tiquete t : this.tiquetesVendidos) {
+                if (t.getEvento() != null && t.getEvento().equals(eventoSeleccionado)) {
+                    if (t.getEstado().equals("REEMBOLSADO")) {
+                        // Guardar nuevo estado del tiquete
+                        this.tiqueteDAO.actualizarEstadoTiquete(t);
+                        
+                        // Guardar nuevo saldo del usuario dueño
+                        this.usuarioDAO.actualizarSaldo(t.getCliente());
+                    }
+                }
+            }
+
+            System.out.println("¡ÉXITO! El evento ha sido cancelado y los saldos actualizados.");
+
+        } catch (NumberFormatException e) {
+            System.err.println("Error: Ingrese un número válido.");
+        } catch (Exception e) {
+            System.err.println("Error al cancelar evento: " + e.getMessage());
+            e.printStackTrace();
+        }
+    }
 
     public void mostrarMenuOrganizador(Scanner scanner) {
         System.out.println("\n--- ¡Bienvenido a TICKETGOD, Organizador [" + this.usuarioActual.getLogIn() + "]! ---");
@@ -524,6 +630,9 @@ public class TiqueteraApp {
         System.out.println("2. Ver mis Tiquetes");
         System.out.println("3. Transferir Tiquete");
         System.out.println("4. Recargar Saldo"); 
+     // --- NUEVAS OPCIONES ---
+        System.out.println("5. [MARKETPLACE] Ver Ofertas de Reventa");
+        System.out.println("6. [MARKETPLACE] Vender un Tiquete");
         System.out.println("0. Cerrar Sesión");
         System.out.print("Elige una opción: ");
         
@@ -548,11 +657,15 @@ public class TiqueteraApp {
             case 4:
                 logicaCompradorAnadirSaldo(scanner); 
                 break;
-            case 0:
-                // No llamamos a cerrarSesion() aquí
-                break;
-            default:
-                System.err.println("Opción no válida.");
+            case 5: logicaMarketplaceVerYComprar(scanner);
+            	break;
+            case 6: logicaMarketplaceVender(scanner); 
+            	break;
+            case 0: 
+            	break; // Cerrar sesión se maneja abajo
+            default: System.err.println("Opción no válida.");
+            
+
         }
         
         if (opcion == 0) {
@@ -1103,6 +1216,137 @@ public class TiqueteraApp {
             System.err.println("¡Error inesperado! " + e.getMessage());
         }
         
+ 
+    }
+    
+ // ==========================================================================
+    //  LÓGICA DEL MARKETPLACE (INTEGRACIÓN)
+    // ==========================================================================
+
+    public void logicaMarketplaceVender(Scanner scanner) {
+        System.out.println("\n--- Vender Tiquete en Marketplace ---");
+        try {
+            UsuarioComprador yo = (UsuarioComprador) this.usuarioActual;
+            List<Tiquete> misTiquetes = yo.getTiquetesComprados();
+            
+            // 1. Filtrar: Solo ACTIVOS, TRANSFERIBLES y NO DELUXE
+            List<Tiquete> aptos = new ArrayList<>();
+            for (Tiquete t : misTiquetes) {
+                if (t.getEstado().equals("ACTIVO") && t.isTransferible() && !t.getTipoTiquete().equals("DELUXE")) {
+                    aptos.add(t);
+                }
+            }
+            
+            if (aptos.isEmpty()) {
+                System.out.println("No tienes tiquetes aptos para revender.");
+                return;
+            }
+            
+            // 2. Mostrar
+            for (int i = 0; i < aptos.size(); i++) {
+                Tiquete t = aptos.get(i);
+                String nombreEvento = (t.getEvento() != null) ? t.getEvento().getNombre() : "Paquete Múltiple";
+                System.out.println((i + 1) + ". " + nombreEvento + " (ID: " + t.getIdTiquete() + ")");
+            }
+            
+            System.out.print("Elige el tiquete a vender (0 cancelar): ");
+            int op = Integer.parseInt(scanner.nextLine());
+            if (op == 0) return;
+            
+            Tiquete aVender = aptos.get(op - 1);
+            
+            System.out.print("¿A qué precio lo quieres vender? ");
+            double precio = Double.parseDouble(scanner.nextLine());
+            
+            // 3. Publicar
+            this.marketplace.publicarOferta(yo, aVender, precio);
+            System.out.println("¡Oferta publicada! Ahora otros usuarios pueden verla.");
+            
+        } catch (Exception e) {
+            System.err.println("Error al publicar: " + e.getMessage());
+        }
     }
 
+    public void logicaMarketplaceVerYComprar(Scanner scanner) {
+        System.out.println("\n--- Ofertas Disponibles en Marketplace ---");
+        try {
+            List<marketplace.OfertaReventa> ofertas = this.marketplace.getOfertasActivas();
+            
+            if (ofertas.isEmpty()) {
+                System.out.println("El marketplace está vacío por ahora.");
+                return;
+            }
+            
+            for (int i = 0; i < ofertas.size(); i++) {
+                marketplace.OfertaReventa o = ofertas.get(i);
+                String nombreEvento = (o.getTiquete().getEvento() != null) ? o.getTiquete().getEvento().getNombre() : "Paquete";
+                System.out.println((i + 1) + ". " + nombreEvento + " | Precio: $" + o.getPrecio() + " | Vendedor: " + o.getVendedor().getLogIn());
+            }
+            
+            System.out.print("Elige una oferta (0 salir): ");
+            int op = Integer.parseInt(scanner.nextLine());
+            if (op == 0) return;
+            
+            marketplace.OfertaReventa ofertaSel = ofertas.get(op - 1);
+            
+            // Validar que no me compre a mí mismo
+            if (ofertaSel.getVendedor().equals(this.usuarioActual)) {
+                System.out.println("¡No puedes comprar tu propia oferta! (Pero puedes eliminarla si quieres).");
+                System.out.println("1. Eliminar mi oferta");
+                System.out.println("2. Volver");
+                int subOp = Integer.parseInt(scanner.nextLine());
+                if (subOp == 1) {
+                    this.marketplace.eliminarOferta(this.usuarioActual, ofertaSel);
+                    System.out.println("Oferta eliminada.");
+                }
+                return;
+            }
+
+            System.out.println("Seleccionaste: $" + ofertaSel.getPrecio());
+            System.out.println("1. Comprar YA");
+            System.out.println("2. Hacer Contraoferta (Solo registro en log)");
+            int accion = Integer.parseInt(scanner.nextLine());
+            
+            if (accion == 1) {
+                this.marketplace.comprarOferta(this.usuarioActual, ofertaSel);
+                
+                // Guardar cambios de saldo y tiquete en BD Principal
+                this.tiqueteDAO.actualizarClienteTiquete(ofertaSel.getTiquete()); // Cambió de dueño
+                this.usuarioDAO.actualizarSaldo(this.usuarioActual); // Comprador pagó
+                this.usuarioDAO.actualizarSaldo(ofertaSel.getVendedor()); // Vendedor cobró
+                
+                System.out.println("¡Compra exitosa! El tiquete es tuyo.");
+            } else if (accion == 2) {
+                System.out.print("¿Cuánto ofreces? ");
+                double oferta = Double.parseDouble(scanner.nextLine());
+                this.marketplace.realizarContraoferta(this.usuarioActual, ofertaSel, oferta);
+                System.out.println("Contraoferta registrada.");
+            }
+            
+        } catch (Exception e) {
+            System.err.println("Error en Marketplace: " + e.getMessage());
+        }
+    }
+    
+    public void logicaAdminVerLogMarketplace() {
+        try {
+            List<String> logs = this.marketplace.consultarLog(this.usuarioActual);
+            System.out.println("\n--- LOG DE AUDITORÍA MARKETPLACE ---");
+            for (String l : logs) {
+                System.out.println(l);
+            }
+            System.out.println("------------------------------------");
+        } catch (Exception e) {
+            System.err.println(e.getMessage());
+        }
+
+
+    }
+    
 }
+
+
+
+
+
+
