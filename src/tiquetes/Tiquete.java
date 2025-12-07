@@ -20,6 +20,8 @@ public abstract class Tiquete {
 	protected Evento evento;
 	protected boolean transferible;
 	protected String estado;
+	protected boolean impreso;
+	
 
 
 	// Metodo para generar un String unico, la logica la saque usando gemini.
@@ -66,6 +68,8 @@ public abstract class Tiquete {
 		this.cliente = cliente;
 		this.localidad = loc;
 		this.evento = evt;
+		this.impreso = false;
+		
 	}
 
 	public Tiquete(double precioBase, double porcentajeServicio, double cobroFijoEmision, String fecha, Usuario cliente,
@@ -140,6 +144,11 @@ public abstract class Tiquete {
 
 
 	public boolean isTransferible() {
+		
+		if (this.impreso) {
+			
+			return false;
+		}
 		return transferible;
 	}
 
@@ -178,6 +187,15 @@ public abstract class Tiquete {
 
 	public void setIdTiqueteDb(int id_tiquete_db) {
 		this.id_tiquete_db = id_tiquete_db;
+	}
+	
+	public boolean isImpreso() {
+		return impreso;
+	}
+	
+	public void setImpreso (boolean estadoNuevo) {
+		this.impreso = estadoNuevo;
+
 	}
 
 

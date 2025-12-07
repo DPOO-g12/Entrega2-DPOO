@@ -28,9 +28,9 @@ public class TiqueteDAO {
         
         // SQL para la tabla PADRE
         String sqlTiquete = "INSERT INTO Tiquete (id_tiquete_java, precio_base, costo_servicio, " +
-                            "costo_emision, precio_final, fecha, estado, transferible, " +
+                            "costo_emision, precio_final, fecha, estado, transferible, impreso" +
                             "login_cliente, id_localidad, id_evento) " +
-                            "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
+                            "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
         
         Connection conn = null;
         PreparedStatement pstmtTiquete = null;
@@ -50,18 +50,19 @@ public class TiqueteDAO {
             pstmtTiquete.setString(6, tiquete.getFecha());
             pstmtTiquete.setString(7, tiquete.getEstado());
             pstmtTiquete.setBoolean(8, tiquete.isTransferible());
-            pstmtTiquete.setString(9, tiquete.getCliente().getLogIn());
+            pstmtTiquete.setBoolean(9, tiquete.isImpreso());
+            pstmtTiquete.setString(10, tiquete.getCliente().getLogIn());
 
             // Manejar FKs opcionales (nulas para TiqueteMultiple)
             if (tiquete.getLocalidad() != null) {
-                pstmtTiquete.setInt(10, tiquete.getLocalidad().getIdLocalidad());
+                pstmtTiquete.setInt(11, tiquete.getLocalidad().getIdLocalidad());
             } else {
-                pstmtTiquete.setNull(10, java.sql.Types.INTEGER);
+                pstmtTiquete.setNull(11, java.sql.Types.INTEGER);
             }
             if (tiquete.getEvento() != null) {
-                pstmtTiquete.setString(11, tiquete.getEvento().getId());
+                pstmtTiquete.setString(12, tiquete.getEvento().getId());
             } else {
-                pstmtTiquete.setNull(11, java.sql.Types.VARCHAR);
+                pstmtTiquete.setNull(12, java.sql.Types.VARCHAR);
             }
             
             pstmtTiquete.executeUpdate();
@@ -228,6 +229,7 @@ public class TiqueteDAO {
                 String fecha = rs.getString("fecha");
                 String estado = rs.getString("estado");
                 boolean transferible = rs.getBoolean("transferible");
+                boolean impreso = rs.getBoolean("impreso");
                 
                 // 2. Hidratar los objetos FK
                 Usuario cliente = mapaUsuarios.get(rs.getString("login_cliente"));
@@ -244,6 +246,11 @@ public class TiqueteDAO {
                 } else {
                     String numAsiento = rs.getString("numero_asiento");
                     tiquete = Basico.cargarDesdeDB(id_db, id_java, pBase, pServicio, pEmision, pFinal, fecha, estado, transferible, cliente, loc, evt, numAsiento);
+                }
+                
+                if (tiquete != null) {
+                    tiquete.setImpreso(impreso); // <--- ASIGNAR AL OBJETO
+                    mapaTiquetes.put(id_db, tiquete);
                 }
                 
                 if (tiquete != null) {
@@ -319,4 +326,23 @@ public class TiqueteDAO {
             }
         }
     }
+    
+    public void actualizarImpresoTiquete (Tiquete tiquete) throws SQLException {
+    	
+    	String sql = "UPDATE Tiquete SET impreso = ? WHERE id_tiquete_db = ?";
+    	
+    	try (Connection conn = ConexionSQLite.conectar();
+    		PreparedStatement pstmt = conn.prepareStatement(sql)) {
+    		
+    		pstmt.setBoolean(1, tiquete.isImpreso());
+    		pstmt.setInt(2, tiquete.getIdTiqueteDb());
+    		
+    		pstmt.executeUpdate();
+    	}
+    	
+    	
+    }
+ 
+    
+    
 }

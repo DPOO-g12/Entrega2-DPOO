@@ -1343,7 +1343,72 @@ public class TiqueteraApp {
 
     }
     
+    
+ // -----------------------------------------------------------
+    // MÉTODOS AUXILIARES PARA LA GUI (INTERFAZ GRÁFICA)
+    // -----------------------------------------------------------
+
+    /**
+     * Valida credenciales sin usar Scanner/Consola.
+     * Retorna el objeto Usuario si es correcto, o null si falla.
+     */
+    
+    
+    public Usuario AutenticarUsuario(String login, String password) {
+    	
+    	Usuario u = buscarUsuarioPorLogin(login);
+    	
+    	if (u != null && u.getContrasena().equals(password)) {
+    		
+    		// ¡Importante! Guardamos la sesión en el núcleo
+    		// "Recuerda quién es esta persona mientras la ventana esté abierta".
+    		this.usuarioActual = u;
+    		return u;
+
+    	}
+    	
+    	return null;
+
+    }
+    
+    public TiqueteDAO getTiqueteDAO() {
+        return this.tiqueteDAO;
+    }
+    
+    public List<Evento> getEventos() {
+        return this.eventos;
+    }
+    
+    // Y también este para el DAO de usuarios:
+    public persistencia.UsuarioDAO getUsuarioDAO() {
+        return this.usuarioDAO;
+    }
+    
+    public marketplace.Marketplace getMarketplace() {
+        return this.marketplace;
+    }
+    
+    
+    public List<Tiquete> getTiquetesVendidos() {
+    	
+    	
+    	return this.tiquetesVendidos;
+    }
+    
+    public List<Venue> getVenues () {
+    	
+    	return this.venues;
+    	
+    	
+    }
+    
+    public java.util.List<cliente.Usuario> getUsuarios() {
+        return this.usuarios;
+    }
+    
 }
+
+
 
 
 
