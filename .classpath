@@ -15,7 +15,7 @@
 	</classpathentry>
 	<classpathentry kind="lib" path="lib/junit-jupiter-api-6.0.1.jar"/>
 	<classpathentry kind="lib" path="lib/junit-jupiter-engine-6.0.1.jar"/>
-	<classpathentry kind="lib" path="/Users/tomasalvarado/Downloads/core-3.5.1.jar"/>
-	<classpathentry kind="lib" path="/Users/tomasalvarado/Downloads/javase-3.5.1.jar"/>
+	<classpathentry kind="lib" path="lib/core-3.5.1.jar"/>
+	<classpathentry kind="lib" path="lib/javase-3.5.1.jar"/>
 	<classpathentry kind="output" path="bin"/>
 </classpath>
