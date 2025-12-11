@@ -42,6 +42,7 @@ public class TiqueteraApp {
     private final EventoDAO eventoDAO;
     private final LocalidadDAO localidadDAO;
     private final TiqueteDAO tiqueteDAO;
+    private persistencia.OfertaDAO ofertaDAO = new persistencia.OfertaDAO();
     
   
    
@@ -1615,7 +1616,113 @@ public class TiqueteraApp {
         }
     }
     
+ // =======================================================
+    //   LÓGICA DE CANCELACIÓN Y REEMBOLSOS (REQUISITO PDF)
+    // =======================================================
+
+    public void cancelarEventoPorAdministrador(eventos.Evento evento) {
+        try {
+            // 1. Cambiar estado del Evento en Memoria y BD
+            evento.setEstado("CANCELADO");
+            this.eventoDAO.actualizarEstadoEvento(evento);
+
+            int tiquetesReembolsados = 0;
+            double totalDevuelto = 0.0;
+
+            // 2. Buscar todos los tiquetes vendidos para este evento
+            for (tiquetes.Tiquete t : this.tiquetesVendidos) {
+                // Solo nos interesan los del evento y que estén activos (o vendidos)
+                // Usamos IDs para comparar por seguridad
+                if (t.getEvento().getId().equals(evento.getId()) && 
+                   ("ACTIVO".equals(t.getEstado()) || "VENDIDO".equals(t.getEstado()))) {
+                    
+                    // 3. Calcular Reembolso: Precio Pagado - Costo Emisión (Según PDF)
+                    // Nota: Si es cortesía, el reembolso es 0.
+                    if ("CORTESIA".equals(t.getEstado())) {
+                        t.setEstado("CANCELADO"); // Solo se cancela, no hay dinero
+                    } else {
+                        double montoAReembolsar = t.getPrecioFinal() - t.getCostoEmision();
+                        
+                        // 4. Devolver dinero al saldo del cliente
+                        cliente.Usuario cliente = t.getCliente();
+                        cliente.setSaldo(cliente.getSaldo() + montoAReembolsar);
+                        
+                        // Actualizar Saldo Usuario en BD
+                        this.usuarioDAO.actualizarSaldo(cliente);
+                        
+                        // Actualizar Estado Tiquete a REEMBOLSADO
+                        t.setEstado("REEMBOLSADO");
+                        
+                        totalDevuelto += montoAReembolsar;
+                    }
+                    
+                    // Actualizar Tiquete en BD
+                    this.tiqueteDAO.actualizarEstadoTiquete(t);
+                    tiquetesReembolsados++;
+                }
+            }
+            
+            System.out.println("Evento cancelado. Se reembolsaron " + tiquetesReembolsados + " tiquetes.");
+            System.out.println("Total dinero devuelto a saldos: $" + totalDevuelto);
+            
+        } catch (Exception e) {
+            System.err.println("Error en proceso de cancelación: " + e.getMessage());
+            e.printStackTrace();
+        }
+    }
  
+    public void actualizarConfiguracionAdmin(cliente.Administrador admin, double nuevoCobro) {
+        try {
+            // 1. Actualizar en Memoria
+            admin.fijarCobroPorEmision(nuevoCobro);
+            
+            // 2. Actualizar en BD
+            this.usuarioDAO.actualizarCobroEmision(admin);
+            
+            System.out.println("Nueva tarifa de emisión fijada en: $" + nuevoCobro);
+        } catch (Exception e) {
+            System.err.println("Error actualizando tarifas: " + e.getMessage());
+        }
+    }
+    
+    public void registrarOferta(localidades.Localidades loc, eventos.Oferta oferta) {
+        try {
+            // 1. Guardar la oferta en BD
+            int idOferta = this.ofertaDAO.guardarOferta(oferta);
+
+            // 2. Actualizar la localidad en BD para apuntar a esta oferta
+            this.ofertaDAO.asociarOfertaALocalidad(loc.getIdLocalidad(), idOferta);
+
+            // 3. Actualizar en Memoria
+            loc.setOferta(oferta);
+
+            System.out.println("Oferta del " + (oferta.getDescuento()*100) + "% aplicada a " + loc.getNombreLocalidad());
+        } catch (Exception e) {
+            System.err.println("Error guardando oferta: " + e.getMessage());
+            e.printStackTrace();
+        }
+    }
+    
+ // --- REGISTRAR PAQUETE (Múltiple) ---
+    public void registrarPaquete(tiquetes.Multiple paquete) {
+        try {
+            // El DAO actualizado se encargará de guardar el paquete y sus hijos
+            this.tiqueteDAO.guardarTiquete(paquete);
+            
+            // Agregar a la lista global en memoria
+            this.tiquetesVendidos.add(paquete);
+            
+            // Agregar los hijos a la memoria también (si no estaban)
+            if (paquete.getTiquetesIncluidos() != null) {
+                this.tiquetesVendidos.addAll(paquete.getTiquetesIncluidos());
+            }
+
+            System.out.println("Paquete '" + paquete.getIdTiquete() + "' registrado con éxito.");
+        } catch (Exception e) {
+            System.err.println("Error registrando paquete: " + e.getMessage());
+            e.printStackTrace();
+        }
+    }
 
     
 }

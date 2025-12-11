@@ -6,8 +6,9 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
-import java.util.Map; // <--- Importante para que funcionen los mapas
+import java.util.Map;
 
 import tiquetes.*; 
 import cliente.Usuario;
@@ -22,7 +23,6 @@ public class TiqueteDAO {
     // ========================================================================
     
     public void guardarTiquete(Tiquete tiquete) throws SQLException {
-        // SQL con la coma corregida
         String sql = "INSERT INTO Tiquete (id_tiquete_java, precio_base, costo_servicio, costo_emision, precio_final, fecha, estado, transferible, impreso, login_cliente, id_localidad, id_evento) " +
                      "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
         
@@ -80,6 +80,7 @@ public class TiqueteDAO {
     
     private void guardarTipoEspecifico(Connection conn, Tiquete t, int idDb) throws SQLException {
         String sqlHijo = null;
+        
         if (t instanceof Basico) {
             sqlHijo = "INSERT INTO Basico (id_tiquete_db, numero_asiento) VALUES (?, ?)";
             try (PreparedStatement pstH = conn.prepareStatement(sqlHijo)) {
@@ -96,10 +97,39 @@ public class TiqueteDAO {
             }
         } 
         else if (t instanceof Multiple) {
+            // Guardar tabla padre Multiple
             sqlHijo = "INSERT INTO Multiple (id_tiquete_db) VALUES (?)";
             try (PreparedStatement pstH = conn.prepareStatement(sqlHijo)) {
                 pstH.setInt(1, idDb);
                 pstH.executeUpdate();
+            }
+            
+            // Guardar relaciones (Hijos incluidos)
+            Multiple m = (Multiple) t;
+            if (m.getTiquetesIncluidos() != null && !m.getTiquetesIncluidos().isEmpty()) {
+                String sqlRel = "INSERT INTO Multiple_TiquetesIncluidos (id_tiquete_multiple, id_tiquete_incluido) VALUES (?, ?)";
+                try (PreparedStatement pstRel = conn.prepareStatement(sqlRel)) {
+                    for (Tiquete hijo : m.getTiquetesIncluidos()) {
+                        pstRel.setInt(1, idDb);
+                        // Aseguramos que el hijo tenga ID (ya debería estar guardado)
+                        pstRel.setInt(2, hijo.getIdTiqueteDb()); 
+                        pstRel.addBatch();
+                    }
+                    pstRel.executeBatch();
+                }
+            }
+            
+            // Guardar relaciones (Eventos asociados)
+            if (m.getEventosAsociados() != null && !m.getEventosAsociados().isEmpty()) {
+                String sqlEvt = "INSERT INTO Multiple_EventosAsociados (id_tiquete_multiple, id_evento) VALUES (?, ?)";
+                try (PreparedStatement pstEvt = conn.prepareStatement(sqlEvt)) {
+                    for (Evento evt : m.getEventosAsociados()) {
+                        pstEvt.setInt(1, idDb);
+                        pstEvt.setString(2, evt.getId());
+                        pstEvt.addBatch();
+                    }
+                    pstEvt.executeBatch();
+                }
             }
         }
     }
@@ -142,15 +172,13 @@ public class TiqueteDAO {
     //                          CARGAR (SELECT) - CORREGIDO
     // ========================================================================
 
-    /**
-     * Carga todos los tiquetes usando los MAPAS que ya tienes preparados en TiqueteraApp.
-     */
     public List<Tiquete> cargarTodosLosTiquetes(
             Map<String, Usuario> mapUsuarios, 
             Map<Integer, Localidades> mapLocalidades, 
             Map<String, Evento> mapEventos) {
         
-        List<Tiquete> tiquetes = new ArrayList<>();
+        List<Tiquete> listaFinal = new ArrayList<>();
+        Map<Integer, Tiquete> mapaIdDB = new HashMap<>(); // Para búsqueda rápida por ID
         
         String sql = "SELECT t.*, " +
                      "b.id_tiquete_db AS es_basico, b.numero_asiento, " + 
@@ -166,7 +194,6 @@ public class TiqueteDAO {
              ResultSet rs = stmt.executeQuery(sql)) {
 
             while (rs.next()) {
-                // 1. Datos crudos
                 int idDb = rs.getInt("id_tiquete_db");
                 String idJava = rs.getString("id_tiquete_java");
                 double precioBase = rs.getDouble("precio_base");
@@ -182,19 +209,15 @@ public class TiqueteDAO {
                 int idLoc = rs.getInt("id_localidad");
                 String idEvento = rs.getString("id_evento");
 
-                // 2. Buscar objetos directos en los MAPAS (¡Más rápido!)
                 Usuario cliente = mapUsuarios.get(loginCliente);
                 Evento evento = mapEventos.get(idEvento);
                 Localidades localidad = mapLocalidades.get(idLoc);
 
                 Tiquete t = null;
 
-                // 3. Reconstruir según el tipo (Usando tus métodos estáticos)
-                
                 if (rs.getString("es_basico") != null) {
                     String asiento = rs.getString("numero_asiento");
                     if (asiento == null) asiento = "General";
-                    
                     t = Basico.cargarDesdeDB(idDb, idJava, precioBase, costoServ, costoEmi, 
                                              precioFinal, fecha, estado, transf, 
                                              cliente, localidad, evento, asiento);
@@ -213,14 +236,27 @@ public class TiqueteDAO {
                                                cliente, tiquetesInc, eventosAso);
                 }
 
-                // 4. Ajustes Finales
                 if (t != null) {
-                    t.setImpreso(impreso); 
+                    t.setImpreso(impreso);
                     
                     if (cliente instanceof UsuarioComprador) {
                         ((UsuarioComprador) cliente).agregarTiquete(t);
                     }
-                    tiquetes.add(t);
+                    // Agregamos a los organizadores también si son dueños (para abonos plantilla)
+                    else if (cliente instanceof cliente.OrganizadorEventos) {
+                        ((cliente.OrganizadorEventos) cliente).getTiquetesComprados().add(t);
+                    }
+                    
+                    listaFinal.add(t);
+                    mapaIdDB.put(idDb, t); // Guardar en mapa para referencia posterior
+                }
+            }
+            
+            // --- FASE 2: CONECTAR LOS HIJOS DE LOS ABONOS ---
+            // Ahora que todos los tiquetes (padres e hijos) están en memoria, los enlazamos.
+            for (Tiquete t : listaFinal) {
+                if (t instanceof Multiple) {
+                    cargarRelacionesMultiple((Multiple) t, mapaIdDB, mapEventos);
                 }
             }
 
@@ -229,6 +265,50 @@ public class TiqueteDAO {
             e.printStackTrace();
         }
         
-        return tiquetes;
+        return listaFinal;
+    }
+
+    /**
+     * Método auxiliar para buscar en la BD qué hijos pertenecen a este paquete
+     * y agregarlos a su lista interna.
+     */
+ // Método auxiliar dentro de TiqueteDAO
+    private void cargarRelacionesMultiple(Multiple multiple, Map<Integer, Tiquete> mapaTodos, Map<String, Evento> mapEventos) {
+        // SQL para buscar los hijos
+        String sqlHijos = "SELECT id_tiquete_incluido FROM Multiple_TiquetesIncluidos WHERE id_tiquete_multiple = ?";
+        // SQL para buscar los eventos
+        String sqlEvts = "SELECT id_evento FROM Multiple_EventosAsociados WHERE id_tiquete_multiple = ?";
+        
+        try (Connection conn = ConexionSQLite.conectar()) {
+            // 1. Cargar Hijos
+            try (PreparedStatement pst = conn.prepareStatement(sqlHijos)) {
+                pst.setInt(1, multiple.getIdTiqueteDb()); // <--- IMPORTANTE: Usa el ID numérico de la BD
+                try (ResultSet rs = pst.executeQuery()) {
+                    while (rs.next()) {
+                        int idHijo = rs.getInt("id_tiquete_incluido");
+                        Tiquete hijo = mapaTodos.get(idHijo); // Buscamos el objeto en el mapa cargado previamente
+                        if (hijo != null) {
+                            multiple.getTiquetesIncluidos().add(hijo);
+                        }
+                    }
+                }
+            }
+            
+            // 2. Cargar Eventos
+            try (PreparedStatement pst = conn.prepareStatement(sqlEvts)) {
+                pst.setInt(1, multiple.getIdTiqueteDb());
+                try (ResultSet rs = pst.executeQuery()) {
+                    while (rs.next()) {
+                        String idEvt = rs.getString("id_evento");
+                        Evento evt = mapEventos.get(idEvt);
+                        if (evt != null) {
+                            multiple.getEventosAsociados().add(evt);
+                        }
+                    }
+                }
+            }
+        } catch (SQLException e) {
+            System.err.println("Error enlazando abono: " + e.getMessage());
+        }
     }
 }

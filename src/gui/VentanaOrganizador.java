@@ -62,7 +62,13 @@ public class VentanaOrganizador extends JFrame {
         JButton btnCortesias = new JButton("4. Mis Cortesías (Transferir)");
         JButton btnReporte = new JButton("5. Ver Mis Ganancias");
         JButton btnGenerarCortesia = new JButton("6. Generar Cortesías (Pedir)"); // <--- NUEVO BOTÓN
-
+        JButton btnCrearOferta = new JButton("7. Crear Oferta (Descuento)"); // <--- NUEVO BOTÓN
+        JButton btnCrearPaquete = new JButton("8. Crear Abono de Temporada");
+        btnCrearPaquete.setForeground(new Color(128, 0, 128)); // Morado
+        
+        JButton btnDeluxe = new JButton("9. Habilitar DELUXE");
+        btnDeluxe.setForeground(new Color(184, 134, 11));
+        
         // Estilo para resaltar la acción importante
         btnAnadirLocalidad.setForeground(new Color(0, 100, 0)); 
         btnAnadirLocalidad.setFont(new Font("Arial", Font.BOLD, 14));
@@ -74,6 +80,9 @@ public class VentanaOrganizador extends JFrame {
         btnCortesias.addActionListener(e -> accionGestionarCortesias());
         btnReporte.addActionListener(e -> accionVerReporte());
         btnGenerarCortesia.addActionListener(e -> accionGenerarCortesias());
+        btnCrearOferta.addActionListener(e -> accionCrearOferta());
+        btnCrearPaquete.addActionListener(e -> accionCrearPaquete());
+        btnDeluxe.addActionListener(e -> accionHabilitarDeluxe());
 
         panelBotones.add(btnCrearEvento);
         panelBotones.add(btnAnadirLocalidad);
@@ -81,7 +90,10 @@ public class VentanaOrganizador extends JFrame {
         panelBotones.add(btnCortesias);
         panelBotones.add(btnReporte);
         panelBotones.add(btnGenerarCortesia);
-
+        panelBotones.add(btnCrearOferta);
+        panelBotones.add(btnCrearPaquete);
+        panelBotones.add(btnDeluxe);
+        
         add(panelBotones, BorderLayout.CENTER);
 
         // --- FOOTER ---
@@ -449,6 +461,261 @@ public class VentanaOrganizador extends JFrame {
             JOptionPane.showMessageDialog(this, "La cantidad debe ser un número entero.");
         } catch (Exception e) {
             JOptionPane.showMessageDialog(this, "Error al generar: " + e.getMessage());
+        }
+    }
+    
+    /**
+     * ACCIÓN NUEVA: Crear Descuento
+     */
+    private void accionCrearOferta() {
+        // 1. Filtrar mis eventos
+        List<Evento> misEventos = organizador.getEventosOrganizados();
+        if (misEventos == null || misEventos.isEmpty()) {
+            JOptionPane.showMessageDialog(this, "No tienes eventos para crear ofertas.");
+            return;
+        }
+
+        // 2. Seleccionar Evento
+        String[] nombresEvt = new String[misEventos.size()];
+        for(int i=0; i<misEventos.size(); i++) nombresEvt[i] = misEventos.get(i).getNombre();
+        
+        String selEvt = (String) JOptionPane.showInputDialog(this, "Elige el Evento:", 
+                "Crear Oferta", JOptionPane.QUESTION_MESSAGE, null, nombresEvt, nombresEvt[0]);
+        if (selEvt == null) return;
+        
+        Evento eventoSel = null;
+        for(Evento e : misEventos) if(e.getNombre().equals(selEvt)) eventoSel = e;
+
+        // 3. Seleccionar Localidad
+        List<Localidades> locs = new ArrayList<>(eventoSel.getLocalidades().values());
+        if (locs.isEmpty()) {
+            JOptionPane.showMessageDialog(this, "Este evento no tiene localidades.");
+            return;
+        }
+        
+        String[] nombresLoc = new String[locs.size()];
+        for(int i=0; i<locs.size(); i++) nombresLoc[i] = locs.get(i).getNombreLocalidad();
+
+        String selLoc = (String) JOptionPane.showInputDialog(this, "Aplica descuento a:", 
+                "Crear Oferta", JOptionPane.QUESTION_MESSAGE, null, nombresLoc, nombresLoc[0]);
+        if (selLoc == null) return;
+
+        Localidades locSel = null;
+        for(Localidades l : locs) if(l.getNombreLocalidad().equals(selLoc)) locSel = l;
+
+        // 4. Pedir Datos de la Oferta
+        String descStr = JOptionPane.showInputDialog("Porcentaje de Descuento (ej. 20 para 20%):");
+        String diasStr = JOptionPane.showInputDialog("¿Cuántos días durará la oferta?");
+
+        try {
+            double porc = Double.parseDouble(descStr);
+            int dias = Integer.parseInt(diasStr);
+            
+            if (porc <= 0 || porc >= 100) {
+                JOptionPane.showMessageDialog(this, "El porcentaje debe ser entre 1 y 99.");
+                return;
+            }
+
+            // Convertir a decimal (20 -> 0.20)
+            double descuentoDecimal = porc / 100.0;
+            
+            // Calcular fecha fin
+            java.time.LocalDateTime fechaFin = java.time.LocalDateTime.now().plusDays(dias);
+            
+            // 5. Crear Objeto Oferta (Usando tu lógica)
+            // Nota: Tu método crearOferta en OrganizadorEventos solo lo hace en memoria,
+            // nosotros creamos el objeto manual aquí para mandarlo al nucleo y guardar en BD.
+            eventos.Oferta nuevaOferta = new eventos.Oferta(true, descuentoDecimal, fechaFin, organizador);
+            
+            // 6. GUARDAR (Llamar al puente)
+            nucleo.registrarOferta(locSel, nuevaOferta);
+            
+            JOptionPane.showMessageDialog(this, "¡Oferta Creada!\nAhora la localidad '" + locSel.getNombreLocalidad() + "' cuesta " + porc + "% menos.");
+
+        } catch (NumberFormatException e) {
+            JOptionPane.showMessageDialog(this, "Ingresa números válidos.");
+        } catch (Exception e) {
+            JOptionPane.showMessageDialog(this, "Error: " + e.getMessage());
+        }
+    }
+    
+    private void accionCrearPaquete() {
+        // 1. Obtener mis eventos
+        List<Evento> misEventos = organizador.getEventosOrganizados();
+        
+        // Validación: Necesitas eventos para agrupar
+        if (misEventos == null || misEventos.size() < 2) {
+            JOptionPane.showMessageDialog(this, "Para crear un abono necesitas tener al menos 2 eventos registrados.\nActualmente tienes: " + (misEventos==null?0:misEventos.size()));
+            return;
+        }
+
+        // --- SOLUCIÓN: USAR CHECKBOXES EN LUGAR DE LISTA ---
+        // Creamos un panel vertical para poner las casillas
+        JPanel panelCheckboxes = new JPanel();
+        panelCheckboxes.setLayout(new BoxLayout(panelCheckboxes, BoxLayout.Y_AXIS));
+        
+        // Lista para guardar las referencias a las casillas y saber cuáles se marcaron después
+        List<JCheckBox> listaChecks = new ArrayList<>();
+        
+        for (Evento e : misEventos) {
+            // Creamos una casilla por cada evento
+            JCheckBox chk = new JCheckBox(e.getNombre());
+            listaChecks.add(chk);
+            panelCheckboxes.add(chk);
+        }
+
+        // Ponemos el panel dentro de un Scroll por si tienes muchos eventos
+        JScrollPane scroll = new JScrollPane(panelCheckboxes);
+        scroll.setPreferredSize(new Dimension(300, 200));
+
+        // Mostramos el diálogo
+        int opt = JOptionPane.showConfirmDialog(this, scroll, 
+                "Marca los eventos para el Abono:", JOptionPane.OK_CANCEL_OPTION);
+        
+        if (opt == JOptionPane.OK_OPTION) {
+            // 2. Recolectar los nombres de los que quedaron marcados (Check = true)
+            List<String> seleccionados = new ArrayList<>();
+            for (JCheckBox chk : listaChecks) {
+                if (chk.isSelected()) {
+                    seleccionados.add(chk.getText());
+                }
+            }
+
+            // Validar que seleccionó al menos 2
+            if (seleccionados.size() < 2) {
+                JOptionPane.showMessageDialog(this, "Debes marcar mínimo 2 casillas para crear un abono.");
+                return;
+            }
+
+            // 3. Pedir localidad para cada evento seleccionado
+            List<Localidades> localidadesParaPaquete = new ArrayList<>();
+
+            for (String nombreEvt : seleccionados) {
+                Evento evt = null;
+                for(Evento e : misEventos) if(e.getNombre().equals(nombreEvt)) evt = e;
+
+                if (evt.getLocalidades() == null || evt.getLocalidades().isEmpty()) {
+                    JOptionPane.showMessageDialog(this, "El evento '" + nombreEvt + "' no tiene localidades. Operación cancelada.");
+                    return;
+                }
+                
+                // Selector simple de localidad para este evento
+                String[] locNombres = new String[evt.getLocalidades().size()];
+                int k=0;
+                List<Localidades> locList = new ArrayList<>(evt.getLocalidades().values());
+                for(Localidades l : locList) locNombres[k++] = l.getNombreLocalidad();
+                
+                String locSel = (String) JOptionPane.showInputDialog(this, 
+                        "Para el evento '" + nombreEvt + "',\nelige qué localidad incluir en el abono:", 
+                        "Configurando Abono", JOptionPane.QUESTION_MESSAGE, null, locNombres, locNombres[0]);
+                
+                if(locSel == null) return; // Canceló
+                
+                for(Localidades l : locList) if(l.getNombreLocalidad().equals(locSel)) localidadesParaPaquete.add(l);
+            }
+
+            // 4. Pedir precio total
+            String precioStr = JOptionPane.showInputDialog("Precio TOTAL del Abono:");
+            if (precioStr == null) return;
+
+            try {
+                double precio = Double.parseDouble(precioStr);
+                
+                // 5. Crear el Paquete (Tu lógica de negocio)
+                tiquetes.Multiple paquete = organizador.crearPaquetePaseDeTemporada(localidadesParaPaquete, precio);
+                
+                // 6. Guardar en BD (Tu lógica de persistencia)
+                nucleo.registrarPaquete(paquete);
+                
+                JOptionPane.showMessageDialog(this, "¡Abono Creado Exitosamente!\nIncluye entradas para " + seleccionados.size() + " eventos.");
+
+            } catch (Exception e) {
+                JOptionPane.showMessageDialog(this, "Error: " + e.getMessage());
+                e.printStackTrace();
+            }
+        }
+    }
+    
+    private void accionHabilitarDeluxe() {
+        // 1. BUSCAR MIS EVENTOS
+        List<Evento> misEventos = organizador.getEventosOrganizados();
+        if (misEventos == null || misEventos.isEmpty()) {
+            JOptionPane.showMessageDialog(this, "No tienes eventos registrados.");
+            return;
+        }
+
+        // 2. SELECCIONAR EVENTO
+        String[] nombresEvt = new String[misEventos.size()];
+        for(int i=0; i<misEventos.size(); i++) nombresEvt[i] = misEventos.get(i).getNombre();
+
+        String selEvt = (String) JOptionPane.showInputDialog(this, "Elige el Evento:", 
+                "Habilitar Deluxe", JOptionPane.QUESTION_MESSAGE, null, nombresEvt, nombresEvt[0]);
+
+        if (selEvt == null) return; // Canceló
+
+        Evento eventoSel = null;
+        for(Evento e : misEventos) if(e.getNombre().equals(selEvt)) eventoSel = e;
+
+        // 3. SELECCIONAR LOCALIDAD
+        if (eventoSel.getLocalidades() == null || eventoSel.getLocalidades().isEmpty()) {
+            JOptionPane.showMessageDialog(this, "Este evento no tiene localidades creadas.");
+            return;
+        }
+
+        List<Localidades> locs = new ArrayList<>(eventoSel.getLocalidades().values());
+        String[] nombresLoc = new String[locs.size()];
+        for(int i=0; i<locs.size(); i++) nombresLoc[i] = locs.get(i).getNombreLocalidad();
+
+        String selLoc = (String) JOptionPane.showInputDialog(this, "Elige la Localidad a volver Deluxe:", 
+                "Habilitar Deluxe", JOptionPane.QUESTION_MESSAGE, null, nombresLoc, nombresLoc[0]);
+
+        if (selLoc == null) return; // Canceló
+
+        // Definimos la variable locSel que faltaba
+        Localidades locSel = null;
+        for(Localidades l : locs) if(l.getNombreLocalidad().equals(selLoc)) locSel = l;
+
+        // --- AHORA SÍ EMPIEZA TU LÓGICA ---
+
+        if (locSel.isDeluxeHabilitado()) {
+            JOptionPane.showMessageDialog(this, "Esta localidad YA tiene venta Deluxe habilitada.");
+            return;
+        }
+
+        // 4. Pedir Configuración
+        String cantStr = JOptionPane.showInputDialog("¿Cuántos tiquetes Deluxe quieres habilitar? (Cupo máximo):");
+        String precioStr = JOptionPane.showInputDialog("¿Cuál es el PRECIO EXTRA sobre el valor base?");
+        String benef = JOptionPane.showInputDialog("Beneficios (ej. Gorra, Fila Rápida):");
+
+        // Validar que no cancelara los inputs
+        if (cantStr == null || precioStr == null || benef == null) return;
+
+        try {
+            int limite = Integer.parseInt(cantStr);
+            double extra = Double.parseDouble(precioStr);
+
+            if (limite > locSel.getCapacidadMax()) {
+                JOptionPane.showMessageDialog(this, "El límite Deluxe no puede ser mayor a la capacidad total (" + locSel.getCapacidadMax() + ").");
+                return;
+            }
+
+            // 5. Configurar Objeto en Memoria
+            locSel.setDeluxeHabilitado(true);
+            locSel.setDeluxeLimite(limite);
+            locSel.setDeluxePrecioExtra(extra);
+            locSel.setDeluxeBeneficios(benef);
+
+            // 6. Guardar en BD
+            // Usamos una nueva instancia del DAO para guardar esta configuración específica
+            new persistencia.LocalidadDAO().habilitarDeluxe(locSel);
+
+            JOptionPane.showMessageDialog(this, "¡Venta Deluxe Habilitada!\nLos compradores ahora verán la opción.");
+
+        } catch (NumberFormatException e) {
+            JOptionPane.showMessageDialog(this, "Error: Cantidad y Precio deben ser números.");
+        } catch (Exception e) {
+            JOptionPane.showMessageDialog(this, "Error: " + e.getMessage());
+            e.printStackTrace();
         }
     }
 }

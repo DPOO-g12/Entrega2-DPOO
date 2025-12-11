@@ -62,7 +62,10 @@ public class InicializadorBD {
             "CREATE TABLE IF NOT EXISTS OfertaReventa (id_oferta INTEGER PRIMARY KEY AUTOINCREMENT, id_tiquete_db INTEGER, login_vendedor TEXT, precio REAL, estado TEXT)",
             
             // 8. TABLA DE OFERTAS (Promociones) - Agregada por seguridad
-            "CREATE TABLE IF NOT EXISTS Oferta (id_oferta INTEGER PRIMARY KEY AUTOINCREMENT, descuento REAL, fecha_fin TEXT, login_organizador TEXT)"
+            "CREATE TABLE IF NOT EXISTS Oferta (id_oferta INTEGER PRIMARY KEY AUTOINCREMENT, descuento REAL, fecha_fin TEXT, login_organizador TEXT)",
+            
+         // 9. CONFIGURACIÓN DELUXE POR LOCALIDAD (NUEVA TABLA)
+            "CREATE TABLE IF NOT EXISTS ConfigDeluxe (id_localidad INTEGER PRIMARY KEY, cantidad_limite INTEGER, precio_extra REAL, beneficios TEXT, vendidos INTEGER DEFAULT 0, FOREIGN KEY(id_localidad) REFERENCES Localidades(id_localidad))"
         };
 
         try (Connection conn = ConexionSQLite.conectar();

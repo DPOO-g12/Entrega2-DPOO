@@ -287,4 +287,47 @@ public class OrganizadorEventos extends Usuario {
 		
 	}
 	
+	// --- NUEVO MÉTODO PARA DELUXE ---
+    public tiquetes.Deluxe crearTiqueteDeluxe(localidades.Localidades localidad, java.util.List<String> beneficios) 
+            throws excepciones.CapacidadExcedidaLocalidad, excepciones.OperacionNoAutorizadaException {
+        
+        Evento evento = localidad.getEvento();
+
+        // 1. Validar que soy el dueño
+        if (!evento.getPromotor().getLogIn().equals(this.getLogIn())) {
+            throw new excepciones.OperacionNoAutorizadaException("No puedes crear Deluxe para eventos ajenos.");
+        }
+
+        // 2. Validar disponibilidad (1 cupo)
+        if (!localidad.verificarDisponibilidad(1)) {
+            throw new excepciones.CapacidadExcedidaLocalidad("No hay cupo en " + localidad.getNombreLocalidad());
+        }
+
+        // 3. Vender (Ocupar el asiento)
+        java.util.List<String> asientos = localidad.venderTiquetes(1);
+        String asientoAsignado = asientos.get(0);
+
+        // 4. Crear el objeto Deluxe
+        // Nota: Deluxe extiende de Tiquete y su constructor ya pone transferible = false
+        // Asumimos precio full sin descuentos para Deluxe
+        String fecha = java.time.LocalDate.now().toString();
+        
+        tiquetes.Deluxe tiqueteDeluxe = new tiquetes.Deluxe(
+            localidad.getPrecioFinal(), // Precio Base
+            0.0, // Servicio (para el org es 0 si es venta directa/cortesia)
+            0.0, // Emision
+            fecha,
+            this, // El cliente dueño es el mismo organizador inicialmente
+            localidad,
+            evento,
+            "ACTIVO",
+            beneficios // Lista de beneficios extra
+        );
+        
+        // 5. Guardar en mi lista
+        this.getTiquetesComprados().add(tiqueteDeluxe);
+        
+        return tiqueteDeluxe;
+    }
+	
 }

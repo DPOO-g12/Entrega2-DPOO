@@ -60,6 +60,9 @@ public class VentanaAdmin extends JFrame {
         JButton btnVerUsuarios = new JButton("3. Ver Usuarios Registrados");
         JButton btnVerLog = new JButton("4. Ver Log Marketplace"); 
         JButton btnEstadisticas = new JButton("5. Estadísticas Financieras"); // <--- AHORA SÍ FUNCIONARÁ
+        JButton btnCancelarEvento = new JButton("6. Cancelar Evento (Reembolsos)");
+        JButton btnTarifas = new JButton("7. Configurar Tarifas del Sistema");
+        btnCancelarEvento.setForeground(Color.RED);// <--- AHORA SÍ FUNCIONARÁ
 
         btnCrearVenue.setForeground(new Color(0, 0, 150)); 
 
@@ -68,12 +71,17 @@ public class VentanaAdmin extends JFrame {
         btnVerUsuarios.addActionListener(e -> accionVerUsuarios());
         btnVerLog.addActionListener(e -> accionVerLogMarketplace()); 
         btnEstadisticas.addActionListener(e -> accionReporteGlobal()); // <--- Llama al método real
+        btnCancelarEvento.addActionListener(e -> accionCancelarEvento());
+        btnTarifas.addActionListener(e -> accionConfigurarTarifas());
+        
 
         panelBotones.add(btnGestionarVenues);
         panelBotones.add(btnCrearVenue);
         panelBotones.add(btnVerUsuarios);
         panelBotones.add(btnVerLog);
         panelBotones.add(btnEstadisticas);
+        panelBotones.add(btnCancelarEvento);
+        panelBotones.add(btnTarifas);
 
         add(panelBotones, BorderLayout.CENTER);
 
@@ -122,9 +130,35 @@ public class VentanaAdmin extends JFrame {
     }
     
     private void accionCrearVenueDirecto() {
-         // (Tu código de crear venue directo que ya tenías)
-         // ...
-         // Si necesitas que te lo pase de nuevo avísame, pero ya lo tenías bien.
+        String tipo = JOptionPane.showInputDialog(this, "Tipo de Venue (ej. Estadio, Auditorio):");
+        if (tipo == null) return;
+
+        String ubicacion = JOptionPane.showInputDialog(this, "Nombre/Ubicación:");
+        if (ubicacion == null) return;
+
+        String capStr = JOptionPane.showInputDialog(this, "Capacidad Máxima:");
+        
+        if (capStr != null) {
+            try {
+                int capacidad = Integer.parseInt(capStr);
+
+                // --- LÓGICA DE CREACIÓN ---
+                // 1. Crear el objeto Venue
+                // IMPORTANTE: El estado es "APROBADO" porque lo crea el Admin
+                // Pasamos una lista vacía de restricciones (new ArrayList<>())
+                Venue nuevoVenue = new Venue(tipo, ubicacion, capacidad, new ArrayList<>(), "APROBADO");
+                
+                // 2. Guardar en Base de Datos y Memoria
+                nucleo.registrarNuevoVenue(nuevoVenue);
+                
+                JOptionPane.showMessageDialog(this, "¡Venue Oficial Creado Exitosamente!\nYa está disponible para que los organizadores creen eventos.");
+
+            } catch (NumberFormatException e) {
+                JOptionPane.showMessageDialog(this, "Error: La capacidad debe ser un número entero.");
+            } catch (Exception e) {
+                JOptionPane.showMessageDialog(this, "Error al crear venue: " + e.getMessage());
+            }
+        }
     }
     
     private void accionVerUsuarios() {
@@ -185,5 +219,73 @@ public class VentanaAdmin extends JFrame {
         area.setText(sb.toString());
         area.setEditable(false);
         JOptionPane.showMessageDialog(this, new JScrollPane(area), "Estadísticas TICKETGOD", JOptionPane.INFORMATION_MESSAGE);
+    }
+    
+    private void accionCancelarEvento() {
+        // 1. Filtrar eventos ACTIVOS
+        List<Evento> activos = new ArrayList<>();
+        for (Evento e : nucleo.getEventos()) {
+            if ("ACTIVO".equalsIgnoreCase(e.getEstado()) || "PUBLICADO".equalsIgnoreCase(e.getEstado())) {
+                activos.add(e);
+            }
+        }
+
+        if (activos.isEmpty()) {
+            JOptionPane.showMessageDialog(this, "No hay eventos activos para cancelar.");
+            return;
+        }
+
+        // 2. Selector
+        String[] nombres = new String[activos.size()];
+        for (int i = 0; i < activos.size(); i++) nombres[i] = activos.get(i).getNombre();
+
+        String sel = (String) JOptionPane.showInputDialog(this, 
+                "SELECCIONA EL EVENTO A CANCELAR\n(Se reembolsará el dinero a los usuarios):", 
+                "Cancelar Evento", JOptionPane.WARNING_MESSAGE, null, nombres, nombres[0]);
+
+        if (sel != null) {
+            Evento eventoSel = null;
+            for(Evento e : activos) if(e.getNombre().equals(sel)) eventoSel = e;
+
+            // 3. Confirmación de Seguridad
+            int confirm = JOptionPane.showConfirmDialog(this, 
+                    "¿Estás seguro de cancelar '" + sel + "'?\nEsta acción devolverá el dinero a los compradores y es IRREVERSIBLE.",
+                    "Confirmar Cancelación", JOptionPane.YES_NO_OPTION, JOptionPane.ERROR_MESSAGE);
+
+            if (confirm == JOptionPane.YES_OPTION) {
+                // 4. Ejecutar Lógica
+                nucleo.cancelarEventoPorAdministrador(eventoSel);
+                JOptionPane.showMessageDialog(this, "Evento Cancelado. Los saldos han sido actualizados.");
+            }
+        }
+    }
+    
+    private void accionConfigurarTarifas() {
+        // 1. Mostrar valor actual
+        double actual = admin.getCobroPorEmision();
+        
+        String input = JOptionPane.showInputDialog(this, 
+                "El 'Costo de Emisión' es el valor fijo que cobra la tiquetera por cada boleta vendida.\n\n" +
+                "Valor Actual: $" + actual + "\n\n" +
+                "Ingresa el nuevo valor:", actual);
+
+        if (input != null) {
+            try {
+                double nuevoValor = Double.parseDouble(input);
+                
+                if (nuevoValor < 0) {
+                    JOptionPane.showMessageDialog(this, "El valor no puede ser negativo.");
+                    return;
+                }
+
+                // 2. Guardar cambios
+                nucleo.actualizarConfiguracionAdmin(admin, nuevoValor);
+                
+                JOptionPane.showMessageDialog(this, "¡Tarifa actualizada correctamente!\nLas próximas ventas usarán este valor.");
+                
+            } catch (NumberFormatException e) {
+                JOptionPane.showMessageDialog(this, "Debes ingresar un número válido.");
+            }
+        }
     }
 }

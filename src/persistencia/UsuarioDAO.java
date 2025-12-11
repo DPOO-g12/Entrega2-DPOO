@@ -183,4 +183,20 @@ public class UsuarioDAO {
         return usuarios; // Devolvemos la lista de usuarios reconstruidos
     }
     
+    /**
+     * Actualiza el valor del cobro por emisión que define el Administrador.
+     */
+    public void actualizarCobroEmision(cliente.Administrador admin) throws SQLException {
+        String sql = "UPDATE Administrador SET cobroPorEmision = ? WHERE login = ?";
+        
+        try (Connection conn = ConexionSQLite.conectar();
+             PreparedStatement pstmt = conn.prepareStatement(sql)) {
+            
+            pstmt.setDouble(1, admin.getCobroPorEmision());
+            pstmt.setString(2, admin.getLogIn());
+            
+            pstmt.executeUpdate();
+        }
+    }
+    
 }
