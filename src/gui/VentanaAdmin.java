@@ -219,6 +219,16 @@ public class VentanaAdmin extends JFrame {
         area.setText(sb.toString());
         area.setEditable(false);
         JOptionPane.showMessageDialog(this, new JScrollPane(area), "Estadísticas TICKETGOD", JOptionPane.INFORMATION_MESSAGE);
+        
+        JDialog ventanaGrafica = new JDialog(this, "Gráfica de Ventas Diarias (Java 2D)", false);
+        ventanaGrafica.setSize(700, 500);
+        ventanaGrafica.setLocationRelativeTo(this);
+        
+        // Instanciar nuestro panel de dibujo pasándole los tiquetes
+        PanelGrafica panelDibujo = new PanelGrafica(nucleo.getTiquetesVendidos());
+        
+        ventanaGrafica.add(panelDibujo);
+        ventanaGrafica.setVisible(true);
     }
     
     private void accionCancelarEvento() {
