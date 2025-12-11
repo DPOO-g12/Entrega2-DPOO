@@ -60,15 +60,16 @@ public class EventoDAO {
      * @param evento El objeto Evento que contiene el estado actualizado.
      * @throws SQLException si ocurre un error de SQL.
      */
-    public void actualizarEstadoEvento(Evento evento) throws SQLException {
+	// --- MÉTODO PARA ACTUALIZAR ESTADO (CANCELAR) ---
+    public void actualizarEstadoEvento(eventos.Evento evento) throws java.sql.SQLException {
         String sql = "UPDATE Evento SET estado = ? WHERE id_evento = ?";
         
-        try (Connection conn = ConexionSQLite.conectar();
-             PreparedStatement pstmt = conn.prepareStatement(sql)) {
-
+        try (java.sql.Connection conn = ConexionSQLite.conectar();
+             java.sql.PreparedStatement pstmt = conn.prepareStatement(sql)) {
+            
             pstmt.setString(1, evento.getEstado());
-            pstmt.setString(2, evento.getId()); // Usamos el ID de negocio
-
+            pstmt.setString(2, evento.getId());
+            
             pstmt.executeUpdate();
         }
     }

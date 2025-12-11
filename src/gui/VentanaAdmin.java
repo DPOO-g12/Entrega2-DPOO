@@ -225,7 +225,8 @@ public class VentanaAdmin extends JFrame {
         // 1. Filtrar eventos ACTIVOS
         List<Evento> activos = new ArrayList<>();
         for (Evento e : nucleo.getEventos()) {
-            if ("ACTIVO".equalsIgnoreCase(e.getEstado()) || "PUBLICADO".equalsIgnoreCase(e.getEstado())) {
+            // Mostrar solo los que NO están ya cancelados
+            if (!"CANCELADO".equalsIgnoreCase(e.getEstado())) {
                 activos.add(e);
             }
         }
@@ -240,7 +241,7 @@ public class VentanaAdmin extends JFrame {
         for (int i = 0; i < activos.size(); i++) nombres[i] = activos.get(i).getNombre();
 
         String sel = (String) JOptionPane.showInputDialog(this, 
-                "SELECCIONA EL EVENTO A CANCELAR\n(Se reembolsará el dinero a los usuarios):", 
+                "SELECCIONA EL EVENTO A CANCELAR\n(Se generarán reembolsos automáticos):", 
                 "Cancelar Evento", JOptionPane.WARNING_MESSAGE, null, nombres, nombres[0]);
 
         if (sel != null) {
@@ -249,13 +250,13 @@ public class VentanaAdmin extends JFrame {
 
             // 3. Confirmación de Seguridad
             int confirm = JOptionPane.showConfirmDialog(this, 
-                    "¿Estás seguro de cancelar '" + sel + "'?\nEsta acción devolverá el dinero a los compradores y es IRREVERSIBLE.",
+                    "¿Estás SEGURO de cancelar '" + sel + "'?\nEsta acción es irreversible y devolverá el dinero.",
                     "Confirmar Cancelación", JOptionPane.YES_NO_OPTION, JOptionPane.ERROR_MESSAGE);
 
             if (confirm == JOptionPane.YES_OPTION) {
-                // 4. Ejecutar Lógica
+                // 4. Llamada al Núcleo
                 nucleo.cancelarEventoPorAdministrador(eventoSel);
-                JOptionPane.showMessageDialog(this, "Evento Cancelado. Los saldos han sido actualizados.");
+                JOptionPane.showMessageDialog(this, "Evento Cancelado.\nRevisa la consola para ver el detalle de reembolsos.");
             }
         }
     }

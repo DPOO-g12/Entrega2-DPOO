@@ -1620,56 +1620,7 @@ public class TiqueteraApp {
     //   LÓGICA DE CANCELACIÓN Y REEMBOLSOS (REQUISITO PDF)
     // =======================================================
 
-    public void cancelarEventoPorAdministrador(eventos.Evento evento) {
-        try {
-            // 1. Cambiar estado del Evento en Memoria y BD
-            evento.setEstado("CANCELADO");
-            this.eventoDAO.actualizarEstadoEvento(evento);
 
-            int tiquetesReembolsados = 0;
-            double totalDevuelto = 0.0;
-
-            // 2. Buscar todos los tiquetes vendidos para este evento
-            for (tiquetes.Tiquete t : this.tiquetesVendidos) {
-                // Solo nos interesan los del evento y que estén activos (o vendidos)
-                // Usamos IDs para comparar por seguridad
-                if (t.getEvento().getId().equals(evento.getId()) && 
-                   ("ACTIVO".equals(t.getEstado()) || "VENDIDO".equals(t.getEstado()))) {
-                    
-                    // 3. Calcular Reembolso: Precio Pagado - Costo Emisión (Según PDF)
-                    // Nota: Si es cortesía, el reembolso es 0.
-                    if ("CORTESIA".equals(t.getEstado())) {
-                        t.setEstado("CANCELADO"); // Solo se cancela, no hay dinero
-                    } else {
-                        double montoAReembolsar = t.getPrecioFinal() - t.getCostoEmision();
-                        
-                        // 4. Devolver dinero al saldo del cliente
-                        cliente.Usuario cliente = t.getCliente();
-                        cliente.setSaldo(cliente.getSaldo() + montoAReembolsar);
-                        
-                        // Actualizar Saldo Usuario en BD
-                        this.usuarioDAO.actualizarSaldo(cliente);
-                        
-                        // Actualizar Estado Tiquete a REEMBOLSADO
-                        t.setEstado("REEMBOLSADO");
-                        
-                        totalDevuelto += montoAReembolsar;
-                    }
-                    
-                    // Actualizar Tiquete en BD
-                    this.tiqueteDAO.actualizarEstadoTiquete(t);
-                    tiquetesReembolsados++;
-                }
-            }
-            
-            System.out.println("Evento cancelado. Se reembolsaron " + tiquetesReembolsados + " tiquetes.");
-            System.out.println("Total dinero devuelto a saldos: $" + totalDevuelto);
-            
-        } catch (Exception e) {
-            System.err.println("Error en proceso de cancelación: " + e.getMessage());
-            e.printStackTrace();
-        }
-    }
  
     public void actualizarConfiguracionAdmin(cliente.Administrador admin, double nuevoCobro) {
         try {
@@ -1720,6 +1671,74 @@ public class TiqueteraApp {
             System.out.println("Paquete '" + paquete.getIdTiquete() + "' registrado con éxito.");
         } catch (Exception e) {
             System.err.println("Error registrando paquete: " + e.getMessage());
+            e.printStackTrace();
+        }
+    }
+    
+    public void cancelarEventoPorAdministrador(eventos.Evento evento) {
+        try {
+            System.out.println(">>> INICIANDO CANCELACIÓN DEL EVENTO: " + evento.getNombre() + " (ID: " + evento.getId() + ")");
+            System.out.println("Total tiquetes en sistema para revisar: " + this.tiquetesVendidos.size());
+
+            // 1. Cambiar estado del Evento en Memoria y BD
+            evento.setEstado("CANCELADO");
+            this.eventoDAO.actualizarEstadoEvento(evento);
+            System.out.println("Estado del evento actualizado a CANCELADO en BD.");
+
+            int contadorReembolsos = 0;
+            double dineroDevuelto = 0.0;
+
+            // 2. Buscar tiquetes vendidos para este evento
+            for (tiquetes.Tiquete t : this.tiquetesVendidos) {
+                
+                // Saltar Abonos/Paquetes padre (que no tienen evento directo)
+                if (t.getEvento() == null) continue; 
+                
+                // Debug: Ver qué estamos revisando
+                // System.out.println("Revisando tiquete " + t.getIdTiquete() + " del evento " + t.getEvento().getId() + " Estado: " + t.getEstado());
+
+                // Comparar ID del evento (usando trim para evitar errores de espacios)
+                String idEventoTiquete = t.getEvento().getId().trim();
+                String idEventoCancelar = evento.getId().trim();
+
+                if (idEventoTiquete.equals(idEventoCancelar)) {
+                    
+                    // Usamos equalsIgnoreCase para ser más robustos
+                    if ("ACTIVO".equalsIgnoreCase(t.getEstado()) || 
+                        "VENDIDO".equalsIgnoreCase(t.getEstado()) || 
+                        "IMPRESO".equalsIgnoreCase(t.getEstado())) {
+                        
+                        // 3. Calcular Reembolso
+                        if (!"CORTESIA".equalsIgnoreCase(t.getEstado())) {
+                            double monto = t.getPrecioFinal() - t.getCostoEmision();
+                            if (monto < 0) monto = 0;
+
+                            // 4. Devolver dinero
+                            cliente.Usuario cliente = t.getCliente();
+                            double saldoAnterior = cliente.getSaldo();
+                            cliente.setSaldo(saldoAnterior + monto);
+                            
+                            this.usuarioDAO.actualizarSaldo(cliente);
+                            
+                            dineroDevuelto += monto;
+                            System.out.println("   -> Reembolsado a " + cliente.getLogIn() + ": $" + monto);
+                        }
+                        
+                        // 5. Actualizar Tiquete
+                        t.setEstado("REEMBOLSADO");
+                        this.tiqueteDAO.actualizarEstadoTiquete(t);
+                        
+                        contadorReembolsos++;
+                    }
+                }
+            }
+            
+            System.out.println(">>> RESUMEN CANCELACIÓN:");
+            System.out.println("   - Tiquetes procesados: " + contadorReembolsos);
+            System.out.println("   - Total dinero devuelto: $" + dineroDevuelto);
+            
+        } catch (Exception e) {
+            System.err.println("Error CRÍTICO cancelando evento: " + e.getMessage());
             e.printStackTrace();
         }
     }

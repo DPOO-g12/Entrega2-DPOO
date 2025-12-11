@@ -162,24 +162,42 @@ public class VentanaMarketplace extends JFrame {
     }
 
     private void accionVender() {
-        // 1. Filtrar mis tiquetes aptos (Activos, Transferibles, NO IMPRESOS)
+        // 1. Filtrar mis tiquetes aptos
         List<Tiquete> aptos = new ArrayList<>();
-        for (Tiquete t : usuario.getTiquetesComprados()) {
-            // REGLA CRÍTICA: No se pueden vender tiquetes impresos
-            if (t.getEstado().equals("ACTIVO") && t.isTransferible() && !t.isImpreso()) {
-                aptos.add(t);
+        
+        // Verificamos que la lista no sea nula para evitar errores
+        if (usuario.getTiquetesComprados() != null) {
+            for (Tiquete t : usuario.getTiquetesComprados()) {
+                // Seguridad: Validar nulos antes de leer estado
+                String estado = (t.getEstado() != null) ? t.getEstado() : "DESCONOCIDO";
+                
+                // REGLAS: Debe estar ACTIVO, ser Transferible y NO estar Impreso
+                if ("ACTIVO".equals(estado) && t.isTransferible() && !t.isImpreso()) {
+                    aptos.add(t);
+                }
             }
         }
         
         if (aptos.isEmpty()) {
-            JOptionPane.showMessageDialog(this, "No tienes tiquetes aptos para vender.\n(Recuerda: No puedes vender tiquetes ya impresos o Deluxe).");
+            JOptionPane.showMessageDialog(this, "No tienes tiquetes aptos para vender.\n(Recuerda: No puedes vender tiquetes impresos, Deluxe o Abonos incompletos).");
             return;
         }
         
-        // 2. Selector visual
+        // 2. Selector visual (CON PROTECCIÓN CONTRA FALLOS)
         String[] opciones = new String[aptos.size()];
         for (int i = 0; i < aptos.size(); i++) {
-            opciones[i] = aptos.get(i).getIdTiquete() + " - " + aptos.get(i).getEvento().getNombre();
+            Tiquete t = aptos.get(i);
+            
+            // --- AQUÍ ESTABA EL ERROR ---
+            String nombreEvt = "Evento Desconocido";
+            if (t.getEvento() != null) {
+                nombreEvt = t.getEvento().getNombre();
+            } else if (t instanceof tiquetes.Multiple) {
+                nombreEvt = "Paquete / Abono";
+            }
+            // -----------------------------
+            
+            opciones[i] = t.getIdTiquete() + " - " + nombreEvt;
         }
         
         String seleccion = (String) JOptionPane.showInputDialog(this, "Elige el tiquete a vender:", "Publicar Oferta", 
@@ -195,21 +213,30 @@ public class VentanaMarketplace extends JFrame {
                 }
             }
             
+            if (aVender == null) return; // Seguridad extra
+
             // 3. Pedir Precio
             String precioStr = JOptionPane.showInputDialog(this, "¿A qué precio lo quieres vender?");
             if (precioStr != null && !precioStr.isEmpty()) {
                 try {
                     double precio = Double.parseDouble(precioStr);
                     
-                    // 4. Publicar
+                    if (precio <= 0) {
+                        JOptionPane.showMessageDialog(this, "El precio debe ser mayor a 0.");
+                        return;
+                    }
+                    
+                    // 4. Publicar (Llamada al núcleo)
                     nucleo.getMarketplace().publicarOferta(usuario, aVender, precio);
-                    JOptionPane.showMessageDialog(this, "¡Oferta Publicada!");
-                    cargarOfertas(); // Refrescar para ver mi propia oferta
+                    
+                    JOptionPane.showMessageDialog(this, "¡Oferta Publicada Exitosamente!");
+                    cargarOfertas(); // Refrescar la lista de fondo
                     
                 } catch (NumberFormatException e) {
-                    JOptionPane.showMessageDialog(this, "Precio inválido.");
+                    JOptionPane.showMessageDialog(this, "Precio inválido. Ingresa solo números.");
                 } catch (Exception e) {
-                    JOptionPane.showMessageDialog(this, "Error: " + e.getMessage());
+                    JOptionPane.showMessageDialog(this, "Error al publicar: " + e.getMessage());
+                    e.printStackTrace(); // Imprime error en consola para depurar si vuelve a pasar
                 }
             }
         }
