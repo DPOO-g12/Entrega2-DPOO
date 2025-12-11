@@ -245,7 +245,7 @@ public class VentanaComprador extends JFrame {
     private void accionTransferirTiquete() {
         List<Tiquete> misTiquetes = usuario.getTiquetesComprados();
         
-        // 1. Filtrar solo los transferibles (No impresos, no vencidos)
+        // 1. Filtrar solo los transferibles
         List<Tiquete> aptos = new ArrayList<>();
         for (Tiquete t : misTiquetes) {
             if (!t.isImpreso() && t.isTransferible() && "ACTIVO".equalsIgnoreCase(t.getEstado())) {
@@ -254,7 +254,7 @@ public class VentanaComprador extends JFrame {
         }
 
         if (aptos.isEmpty()) {
-            JOptionPane.showMessageDialog(this, "No tienes tiquetes aptos para transferir.\n(Recuerda: No puedes transferir si ya lo imprimiste).");
+            JOptionPane.showMessageDialog(this, "No tienes tiquetes aptos para transferir.");
             return;
         }
 
@@ -275,19 +275,25 @@ public class VentanaComprador extends JFrame {
                 if (opciones[i].equals(seleccion)) aTransferir = aptos.get(i);
             }
 
-            // 3. Pedir Destinatario y Password
+            // 3. Pedir Datos
             String destino = JOptionPane.showInputDialog("Ingresa el usuario (Login) de tu amigo:");
             if (destino == null || destino.isEmpty()) return;
 
-            String pass = JOptionPane.showInputDialog("Confirma con TU contraseña por seguridad:");
+            String pass = JOptionPane.showInputDialog("Confirma con TU contraseña:");
             if (pass == null) return;
 
             try {
-                // 4. Ejecutar Lógica
-                // Usamos el método transferirTiquete del usuario (asumiendo que sigue la misma lógica que Organizador)
-                usuario.transferirTiquete(aTransferir, pass, destino, nucleo.getUsuarios());
+                // --- CORRECCIÓN AQUÍ: CREAR EL MAPA ---
+                // Convertimos la lista del nucleo a un Mapa temporal para que el método funcione
+                java.util.Map<String, cliente.Usuario> mapaUsuarios = new java.util.HashMap<>();
+                for (cliente.Usuario u : nucleo.getUsuarios()) {
+                    mapaUsuarios.put(u.getLogIn(), u);
+                }
 
-                // 5. Actualizar BD (Cambiar dueño)
+                // 4. Ejecutar Lógica (Pasando el mapa)
+                usuario.transferirTiquete(aTransferir, pass, destino, mapaUsuarios);
+
+                // 5. Actualizar BD
                 nucleo.getTiqueteDAO().actualizarClienteTiquete(aTransferir);
                 
                 JOptionPane.showMessageDialog(this, "¡Tiquete enviado exitosamente a " + destino + "!");
@@ -297,7 +303,6 @@ public class VentanaComprador extends JFrame {
             }
         }
     }
-    
     /**
      * Permite al usuario seleccionar varios eventos y comprarlos como un solo PAQUETE MULTIPLE.
      */

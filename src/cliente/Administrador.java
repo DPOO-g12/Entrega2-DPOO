@@ -182,7 +182,7 @@ public class Administrador extends Usuario {
 
 	
 	@Override
-	public void transferirTiquete(Tiquete tiquete,String passwordConfirmacion, String loginDestinatario, List<Usuario> todosLosUsuarios) {
+	public void transferirTiquete(Tiquete tiquete,String passwordConfirmacion, String loginDestinatario, Map<String, Usuario> mapaUsuarios) {
 	    // Vacío
 	}
 	

@@ -246,45 +246,52 @@ public class OrganizadorEventos extends Usuario {
 	
 	
 	@Override
-	public void transferirTiquete(Tiquete tiquete, String passwordConfirmacion, String loginDestinatario,List<Usuario> todosLosUsuarios) throws AutenticacionFallidaException, TiqueteNoTransferibleException, Exception {
+
+	public void transferirTiquete(Tiquete tiquete, String passwordConfirmacion, String loginDestinatario, Map<String, Usuario> mapaUsuarios) throws AutenticacionFallidaException, TiqueteNoTransferibleException, Exception {
 		
+		// 1. Validar que el tiquete sea mío
 		if (!this.tiquetesComprados.contains(tiquete)) {
 	        throw new TiqueteNoTransferibleException("El tiquete " + tiquete.getIdTiquete() + " no te pertenece.");
 	    }
 		
+		// 2. Validar contraseña
 		if (!this.contrasena.equals(passwordConfirmacion)) {
 	        throw new AutenticacionFallidaException("Contraseña incorrecta. Transferencia cancelada.");
 	    }
 		
-		Usuario destinatario = null;
-	    for (Usuario u : todosLosUsuarios) {
-	        if (u.getLogIn().equals(loginDestinatario)) {
-	            destinatario = u;
-	            break;
-	        }
-	    }
+		// 3. Buscar Destinatario (CORRECCIÓN: Usamos el Mapa directamente)
+		Usuario destinatario = mapaUsuarios.get(loginDestinatario);
 	    
 	    if (destinatario == null) {
 	        throw new Exception("Usuario destinatario '" + loginDestinatario + "' no encontrado.");
 	    }
 	    
-	    if (destinatario instanceof Administrador) {
+	    // 4. Validaciones extra
+	    if (destinatario.getLogIn().equals(this.getLogIn())) {
+            throw new Exception("No puedes transferirte a ti mismo.");
+        }
+
+	    if (destinatario instanceof cliente.Administrador) {
 	        throw new TiqueteNoTransferibleException("No se pueden transferir tiquetes a un Administrador.");
 	    }
 	    
+	    // 5. EJECUTAR TRANSFERENCIA (Memoria)
+	    
+	    // A. Cambiar dueño dentro del tiquete
 	    tiquete.transferirTiquete(destinatario);
+	    
+	    // B. Quitar de MI lista
 	    this.tiquetesComprados.remove(tiquete);
 	    
-	    if (destinatario instanceof UsuarioComprador) {
-	    	
-	        ((UsuarioComprador) destinatario).getTiquetesComprados().add(tiquete);
+	    // C. Agregar a la lista del DESTINATARIO
+	    if (destinatario instanceof cliente.UsuarioComprador) {
+	        ((cliente.UsuarioComprador) destinatario).getTiquetesComprados().add(tiquete);
 	        
-	    } else if (destinatario instanceof OrganizadorEventos) {
-	    	
-	        ((OrganizadorEventos) destinatario).getTiquetesComprados().add(tiquete);
+	    } else if (destinatario instanceof cliente.OrganizadorEventos) {
+	        ((cliente.OrganizadorEventos) destinatario).getTiquetesComprados().add(tiquete);
 	    }
-		
-		
+	    
+	    System.out.println("Transferencia completada: " + this.getLogIn() + " -> " + loginDestinatario);
 	}
 	
 	// --- NUEVO MÉTODO PARA DELUXE ---

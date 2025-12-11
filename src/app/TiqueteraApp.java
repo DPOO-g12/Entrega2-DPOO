@@ -673,23 +673,23 @@ public class TiqueteraApp {
             cerrarSesion();
         }
     }
-    public void logicaCompradorTransferirTiquete(Scanner scanner) {
+    public void logicaCompradorTransferirTiquete(java.util.Scanner scanner) {
         System.out.println("\n--- 3. Transferir Tiquete ---");
         
         try {
             // 1. Mostrarle al usuario los tiquetes que PUEDE transferir
             System.out.println("Tus tiquetes transferibles:");
-            List<Tiquete> misTiquetes;
-            List<Tiquete> tiquetesTransferibles = new ArrayList<>();
+            List<tiquetes.Tiquete> misTiquetes;
+            List<tiquetes.Tiquete> tiquetesTransferibles = new ArrayList<>();
             
             // Obtenemos los tiquetes del comprador
-            if (this.usuarioActual instanceof UsuarioComprador) {
-                misTiquetes = ((UsuarioComprador) this.usuarioActual).getTiquetesComprados();
+            if (this.usuarioActual instanceof cliente.UsuarioComprador) {
+                misTiquetes = ((cliente.UsuarioComprador) this.usuarioActual).getTiquetesComprados();
             } else { return; } 
 
             // Filtramos solo los que se pueden transferir
-            for (Tiquete t : misTiquetes) {
-                if (t.isTransferible() && t.getEstado().equals("ACTIVO")) {
+            for (tiquetes.Tiquete t : misTiquetes) {
+                if (t.isTransferible() && "ACTIVO".equals(t.getEstado())) {
                     tiquetesTransferibles.add(t);
                 }
             }
@@ -701,21 +701,23 @@ public class TiqueteraApp {
 
             // 2. Imprimir la lista filtrada
             for (int i = 0; i < tiquetesTransferibles.size(); i++) {
-                Tiquete t = tiquetesTransferibles.get(i);
-                System.out.println("  " + (i + 1) + ". [" + t.getIdTiquete() + "] " + 
-                                   (t.getEvento() != null ? t.getEvento().getNombre() : "Paquete"));
+                tiquetes.Tiquete t = tiquetesTransferibles.get(i);
+                String nombreEvt = (t.getEvento() != null) ? t.getEvento().getNombre() : "Paquete/Abono";
+                System.out.println("  " + (i + 1) + ". [" + t.getIdTiquete() + "] " + nombreEvt);
             }
 
             // 3. Pedir datos (Consola)
-            System.out.print("Elige el número del tiquetes que quieres transferir (0 para cancelar): ");
-            int opcion = Integer.parseInt(scanner.nextLine());
+            System.out.print("Elige el número del tiquete que quieres transferir (0 para cancelar): ");
+            String inputOp = scanner.nextLine();
+            int opcion = Integer.parseInt(inputOp);
+            
             if (opcion == 0) return;
             if (opcion < 1 || opcion > tiquetesTransferibles.size()) {
                 System.err.println("Opción no válida.");
                 return;
             }
             
-            Tiquete tiqueteATransferir = tiquetesTransferibles.get(opcion - 1);
+            tiquetes.Tiquete tiqueteATransferir = tiquetesTransferibles.get(opcion - 1);
 
             System.out.print("Escribe el login del usuario que recibirá el tiquete: ");
             String loginDestinatario = scanner.nextLine();
@@ -723,31 +725,35 @@ public class TiqueteraApp {
             System.out.print("Para confirmar, escribe TU contraseña: ");
             String passwordConfirmacion = scanner.nextLine();
 
-            // 4. Llamar a la Lógica  (Paso 2)
+            // 4. Llamar a la Lógica
             System.out.println("Validando y transfiriendo...");
+
+            // --- CORRECCIÓN: CONVERTIR LISTA A MAPA ---
+            java.util.Map<String, cliente.Usuario> mapaUsuarios = new java.util.HashMap<>();
+            for (cliente.Usuario u : this.usuarios) {
+                mapaUsuarios.put(u.getLogIn(), u);
+            }
+            // ------------------------------------------
+
             this.usuarioActual.transferirTiquete(
                 tiqueteATransferir, 
                 passwordConfirmacion, 
                 loginDestinatario, 
-                this.usuarios // la lista  para buscar
+                mapaUsuarios // <--- AHORA PASAMOS EL MAPA, NO LA LISTA
             );
             
-            // 5. Llamar a la Persistencia (Paso 3)
-            // ¡Guardamos los cambios en la Base De datos!
+            // 5. Llamar a la Persistencia
+            // Guardamos el cambio de dueño en la BD
             this.tiqueteDAO.actualizarClienteTiquete(tiqueteATransferir);
-            this.tiqueteDAO.actualizarEstadoTiquete(tiqueteATransferir); // (El estado cambió a "TRANSFERIDO")
             
-            System.out.println("PERFECTO, tu tiquwte ahora ha sido transferido a '" + loginDestinatario + "'.");
+            System.out.println("PERFECTO, tu tiquete ahora ha sido transferido a '" + loginDestinatario + "'.");
             System.out.println("Ya no está en tu lista de 'Mis Tiquetes'.");
 
         } catch (NumberFormatException e) {
             System.err.println("Error: Debes introducir un número válido.");
-        } catch (TiqueteNoTransferibleException | AutenticacionFallidaException e) {
-            // Capturamos los errores de negocio que definimos
-            System.err.println("¡Transferencia Fallida! " + e.getMessage());
         } catch (Exception e) {
-            // Capturamos otros errores (ej. "Usuario no encontrado")
-            System.err.println("¡Error! " + e.getMessage());
+            // Capturamos errores de negocio (contraseña, usuario no existe, etc.)
+            System.err.println("¡Transferencia Fallida! " + e.getMessage());
         }
     }
     public void logicaCompradorVerMisTiquetes(Scanner scanner) {
@@ -1677,72 +1683,69 @@ public class TiqueteraApp {
     
     public void cancelarEventoPorAdministrador(eventos.Evento evento) {
         try {
-            System.out.println(">>> INICIANDO CANCELACIÓN DEL EVENTO: " + evento.getNombre() + " (ID: " + evento.getId() + ")");
-            System.out.println("Total tiquetes en sistema para revisar: " + this.tiquetesVendidos.size());
+            System.out.println(">>> CANCELANDO EVENTO: " + evento.getNombre());
 
-            // 1. Cambiar estado del Evento en Memoria y BD
+            // 1. Actualizar estado del Evento (BD + Memoria)
             evento.setEstado("CANCELADO");
             this.eventoDAO.actualizarEstadoEvento(evento);
-            System.out.println("Estado del evento actualizado a CANCELADO en BD.");
 
-            int contadorReembolsos = 0;
-            double dineroDevuelto = 0.0;
+            int contador = 0;
+            double totalDinero = 0.0;
 
-            // 2. Buscar tiquetes vendidos para este evento
+            // 2. Recorrer TODOS los tiquetes del sistema
             for (tiquetes.Tiquete t : this.tiquetesVendidos) {
                 
-                // Saltar Abonos/Paquetes padre (que no tienen evento directo)
-                if (t.getEvento() == null) continue; 
-                
-                // Debug: Ver qué estamos revisando
-                // System.out.println("Revisando tiquete " + t.getIdTiquete() + " del evento " + t.getEvento().getId() + " Estado: " + t.getEstado());
+                // Protección contra Abonos (Eventos nulos)
+                if (t.getEvento() == null) continue;
 
-                // Comparar ID del evento (usando trim para evitar errores de espacios)
-                String idEventoTiquete = t.getEvento().getId().trim();
-                String idEventoCancelar = evento.getId().trim();
-
-                if (idEventoTiquete.equals(idEventoCancelar)) {
+                // Verificar si es del evento que estamos cancelando
+                // (Usamos trim() para evitar fallos por espacios invisibles)
+                if (t.getEvento().getId().trim().equals(evento.getId().trim())) {
                     
-                    // Usamos equalsIgnoreCase para ser más robustos
-                    if ("ACTIVO".equalsIgnoreCase(t.getEstado()) || 
-                        "VENDIDO".equalsIgnoreCase(t.getEstado()) || 
-                        "IMPRESO".equalsIgnoreCase(t.getEstado())) {
-                        
-                        // 3. Calcular Reembolso
-                        if (!"CORTESIA".equalsIgnoreCase(t.getEstado())) {
-                            double monto = t.getPrecioFinal() - t.getCostoEmision();
-                            if (monto < 0) monto = 0;
+                    String estadoActual = t.getEstado().toUpperCase();
 
-                            // 4. Devolver dinero
-                            cliente.Usuario cliente = t.getCliente();
-                            double saldoAnterior = cliente.getSaldo();
-                            cliente.setSaldo(saldoAnterior + monto);
-                            
-                            this.usuarioDAO.actualizarSaldo(cliente);
-                            
-                            dineroDevuelto += monto;
-                            System.out.println("   -> Reembolsado a " + cliente.getLogIn() + ": $" + monto);
-                        }
+                    // --- LÓGICA CORREGIDA ---
+                    // En lugar de preguntar si es "ACTIVO", preguntamos si es VÁLIDO para cancelar.
+                    // Si NO está ya reembolsado ni cancelado, procedemos.
+                    // Esto incluye: "ACTIVO", "TRANSFERIDO", "VENDIDO", "IMPRESO", etc.
+                    if (!"REEMBOLSADO".equals(estadoActual) && 
+                        !"CANCELADO".equals(estadoActual) && 
+                        !"VENCIDO".equals(estadoActual)) {
                         
-                        // 5. Actualizar Tiquete
+                        // 3. Reembolsar Dinero
+                        // (Solo si no es Cortesía)
+                        if (!"CORTESIA".equals(estadoActual)) {
+                            double reembolso = t.getPrecioFinal() - t.getCostoEmision();
+                            if (reembolso < 0) reembolso = 0;
+
+                            // Devolvemos la plata al DUEÑO ACTUAL (sea quien sea)
+                            cliente.Usuario duenoActual = t.getCliente();
+                            duenoActual.setSaldo(duenoActual.getSaldo() + reembolso);
+                            
+                            this.usuarioDAO.actualizarSaldo(duenoActual);
+                            
+                            totalDinero += reembolso;
+                            System.out.println("   -> Reembolso de $" + reembolso + " para " + duenoActual.getLogIn());
+                        }
+
+                        // 4. Marcar como Reembolsado en BD
                         t.setEstado("REEMBOLSADO");
                         this.tiqueteDAO.actualizarEstadoTiquete(t);
                         
-                        contadorReembolsos++;
+                        contador++;
                     }
                 }
             }
             
-            System.out.println(">>> RESUMEN CANCELACIÓN:");
-            System.out.println("   - Tiquetes procesados: " + contadorReembolsos);
-            System.out.println("   - Total dinero devuelto: $" + dineroDevuelto);
-            
+            System.out.println(">>> FINALIZADO.");
+            System.out.println("   Total tiquetes cancelados: " + contador);
+            System.out.println("   Total dinero devuelto: $" + totalDinero);
+
         } catch (Exception e) {
-            System.err.println("Error CRÍTICO cancelando evento: " + e.getMessage());
+            System.err.println("Error cancelando evento: " + e.getMessage());
             e.printStackTrace();
         }
     }
-
     
 }
 

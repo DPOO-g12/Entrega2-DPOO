@@ -279,11 +279,18 @@ public class VentanaOrganizador extends JFrame {
         String[] opciones = new String[misTiquetes.size()];
         for (int i = 0; i < misTiquetes.size(); i++) {
             tiquetes.Tiquete t = misTiquetes.get(i);
+            
             String estado = t.isImpreso() ? "[IMPRESO - BLOQUEADO]" : "[DISPONIBLE]";
-            // Evitamos error si localidad es nula (puede pasar en paquetes)
+            
+            // Protección contra nulos (por si es un Paquete)
+            String nombreEvt = "Paquete/Abono";
+            if (t.getEvento() != null) {
+                nombreEvt = t.getEvento().getNombre();
+            }
+            
             String locNombre = (t.getLocalidad() != null) ? t.getLocalidad().getNombreLocalidad() : "N/A";
             
-            opciones[i] = t.getIdTiquete() + " - " + t.getEvento().getNombre() + " (" + locNombre + ") " + estado;
+            opciones[i] = t.getIdTiquete() + " - " + nombreEvt + " (" + locNombre + ") " + estado;
         }
 
         String seleccion = (String) JOptionPane.showInputDialog(this, 
@@ -301,16 +308,31 @@ public class VentanaOrganizador extends JFrame {
                     JOptionPane.showMessageDialog(this, "ERROR: Este tiquete ya fue impreso. No se puede transferir.");
                     return;
                 }
+                
                 String dest = JOptionPane.showInputDialog("Login del destinatario:");
                 String pass = JOptionPane.showInputDialog("Confirma tu contraseña:");
                 
                 if (dest != null && pass != null) {
                     try {
-                        organizador.transferirTiquete(tiqueteSel, pass, dest, nucleo.getUsuarios());
+                        // --- CORRECCIÓN OBLIGATORIA AQUÍ ---
+                        // Convertimos la Lista a Mapa manualmente para que funcione
+                        java.util.Map<String, cliente.Usuario> mapaUsuarios = new java.util.HashMap<>();
+                        for (cliente.Usuario u : nucleo.getUsuarios()) {
+                            mapaUsuarios.put(u.getLogIn(), u);
+                        }
+
+                        // Ahora pasamos 'mapaUsuarios' en lugar de 'nucleo.getUsuarios()'
+                        organizador.transferirTiquete(tiqueteSel, pass, dest, mapaUsuarios);
+                        // ------------------------------------
+                        
+                        // Guardar cambio de dueño en BD
                         nucleo.getTiqueteDAO().actualizarClienteTiquete(tiqueteSel);
+                        
                         JOptionPane.showMessageDialog(this, "¡Transferencia exitosa a " + dest + "!");
+                        
                     } catch (Exception e) {
                         JOptionPane.showMessageDialog(this, "Error: " + e.getMessage());
+                        e.printStackTrace();
                     }
                 }
             }

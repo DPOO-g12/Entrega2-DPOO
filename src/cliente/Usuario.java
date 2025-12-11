@@ -4,6 +4,7 @@ package cliente;
 import tiquetes.Tiquete;
 
 import java.util.List;
+import java.util.Map;
 
 import excepciones.AutenticacionFallidaException;
 import excepciones.TiqueteNoTransferibleException;
@@ -29,7 +30,7 @@ public abstract class Usuario {
 
 	public abstract void pedirRembolso(Tiquete tiquete) throws TiqueteNoTransferibleException;
 	
-	public abstract void transferirTiquete(Tiquete tiquete,String passwordConfirmacion, String loginDestinatario, List<Usuario> todosLosUsuarios) throws AutenticacionFallidaException, TiqueteNoTransferibleException, Exception;
+	public abstract void transferirTiquete(Tiquete tiquete,String passwordConfirmacion, String loginDestinatario, Map<String, Usuario> mapaUsuarios) throws AutenticacionFallidaException, TiqueteNoTransferibleException, Exception;
 	
 	
 	
