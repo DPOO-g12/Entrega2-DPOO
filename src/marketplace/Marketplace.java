@@ -182,6 +182,14 @@ public class Marketplace {
         return ofertasActivas;
     }
     
+ // En Marketplace.java
+    public List<String> getLogDeRegistros() {
+        if (this.logDeRegistros == null) {
+            this.logDeRegistros = new ArrayList<>();
+        }
+        return this.logDeRegistros;
+    }
+    
 	
 	
 }

@@ -3,6 +3,7 @@ package gui;
 import javax.swing.*;
 import java.awt.*;
 import java.util.List;
+import java.util.ArrayList;
 import app.TiqueteraApp;
 import cliente.UsuarioComprador;
 import tiquetes.Tiquete;
@@ -11,7 +12,7 @@ public class VentanaComprador extends JFrame {
 
     private TiqueteraApp nucleo;
     private UsuarioComprador usuario;
-    private JLabel lblSaldo; // Para poder actualizarlo visualmente
+    private JLabel lblSaldo; 
 
     public VentanaComprador(TiqueteraApp nucleo, UsuarioComprador usuario) {
         this.nucleo = nucleo;
@@ -23,9 +24,9 @@ public class VentanaComprador extends JFrame {
 
     private void configurarVentana() {
         setTitle("Panel Comprador - TICKETGOD");
-        setSize(700, 500);
+        setSize(700, 550); // Un poco más alto para el nuevo botón
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
-        setLocationRelativeTo(null); // Centrar
+        setLocationRelativeTo(null); 
         setLayout(new BorderLayout());
     }
 
@@ -39,7 +40,7 @@ public class VentanaComprador extends JFrame {
         lblTitulo.setFont(new Font("Arial", Font.BOLD, 24));
         lblTitulo.setHorizontalAlignment(SwingConstants.CENTER);
 
-        lblSaldo = new JLabel("Saldo Disponible: $" + usuario.getSaldo());
+        lblSaldo = new JLabel("Saldo Disponible: $" + String.format("%,.0f", usuario.getSaldo()));
         lblSaldo.setFont(new Font("Arial", Font.BOLD, 18));
         lblSaldo.setForeground(new Color(0, 100, 0)); // Verde oscuro
         lblSaldo.setHorizontalAlignment(SwingConstants.CENTER);
@@ -48,42 +49,51 @@ public class VentanaComprador extends JFrame {
         panelHeader.add(lblSaldo);
         add(panelHeader, BorderLayout.NORTH);
 
-        // --- 2. BOTONES PRINCIPALES (Grid central) ---
-        JPanel panelBotones = new JPanel(new GridLayout(2, 2, 20, 20));
+        // --- 2. BOTONES PRINCIPALES ---
+        // Cambiamos a 3 filas, 2 columnas para acomodar el 5to botón
+        JPanel panelBotones = new JPanel(new GridLayout(3, 2, 20, 20));
         panelBotones.setBorder(BorderFactory.createEmptyBorder(30, 50, 30, 50));
 
-        JButton btnComprar = crearBoton("Comprar Tiquetes", "Busca eventos y compra entradas");
-        JButton btnMisTiquetes = crearBoton("Mis Tiquetes (Imprimir)", "Ve tus compras y genera el QR");
-        JButton btnMarketplace = crearBoton("Marketplace", "Compra y vende tiquetes de otros");
-        JButton btnRecargar = crearBoton("Recargar Saldo", "Añade dinero a tu cuenta");
+        JButton btnComprar = crearBoton("1. Comprar Tiquetes", "Busca eventos y compra entradas");
+        JButton btnMisTiquetes = crearBoton("2. Mis Tiquetes (Imprimir)", "Ve tus compras y genera el QR");
+        JButton btnMarketplace = crearBoton("3. Marketplace", "Compra y vende tiquetes de otros");
+        JButton btnRecargar = crearBoton("4. Recargar Saldo", "Añade dinero a tu cuenta");
+        JButton btnTransferir = crearBoton("5. Transferir a Amigo", "Envía un tiquete a otro usuario"); // <--- NUEVO
+        
+        // Botón de salir (lo ponemos en el grid para rellenar el hueco 6, o en el footer)
+        // Por diseño, dejaremos el hueco 6 vacío o ponemos un label vacío.
 
         // --- ACCIONES ---
         
-        // A. Recargar Saldo
-        btnRecargar.addActionListener(e -> accionRecargarSaldo());
-
-        // B. Ver Mis Tiquetes (Aquí conectaremos con la impresión)
-        btnMisTiquetes.addActionListener(e -> accionVerMisTiquetes());
-
-        // C. Acción Real: Abrir la ventana de compra
+        // 1. Comprar
         btnComprar.addActionListener(e -> {
-            // Verificamos si hay eventos antes de abrir
             if (nucleo.getEventos().isEmpty()) {
-                JOptionPane.showMessageDialog(this, "No hay eventos activos en el sistema.");
+                JOptionPane.showMessageDialog(this, "No hay eventos disponibles en el sistema.");
             } else {
-                // Abrimos la ventana nueva pasándole el control
                 new VentanaCompra(nucleo, usuario).setVisible(true);
             }
         });
-        
+
+        // 2. Ver / Imprimir
+        btnMisTiquetes.addActionListener(e -> accionVerMisTiquetes());
+
+        // 3. Marketplace
         btnMarketplace.addActionListener(e -> {
             new VentanaMarketplace(nucleo, usuario).setVisible(true);
         });
+
+        // 4. Recargar
+        btnRecargar.addActionListener(e -> accionRecargarSaldo());
+
+        // 5. Transferir (NUEVO)
+        btnTransferir.addActionListener(e -> accionTransferirTiquete());
+
 
         panelBotones.add(btnComprar);
         panelBotones.add(btnMisTiquetes);
         panelBotones.add(btnMarketplace);
         panelBotones.add(btnRecargar);
+        panelBotones.add(btnTransferir); // <--- AGREGADO
 
         add(panelBotones, BorderLayout.CENTER);
 
@@ -101,7 +111,6 @@ public class VentanaComprador extends JFrame {
         add(panelFooter, BorderLayout.SOUTH);
     }
 
-    // Método auxiliar para crear botones bonitos
     private JButton crearBoton(String titulo, String tooltip) {
         JButton btn = new JButton(titulo);
         btn.setFont(new Font("Arial", Font.PLAIN, 16));
@@ -109,7 +118,9 @@ public class VentanaComprador extends JFrame {
         return btn;
     }
 
-    // --- LÓGICA DE LOS BOTONES ---
+    // =======================================================
+    //                 LÓGICA DE LOS BOTONES
+    // =======================================================
 
     private void accionRecargarSaldo() {
         String input = JOptionPane.showInputDialog(this, "¿Cuánto quieres recargar?");
@@ -117,25 +128,18 @@ public class VentanaComprador extends JFrame {
             try {
                 double monto = Double.parseDouble(input);
                 if (monto > 0) {
-                    // Actualizar memoria
                     double nuevoSaldo = usuario.getSaldo() + monto;
                     usuario.setSaldo(nuevoSaldo);
                     
                     // Actualizar BD
-                    try {
-                        // Usamos el DAO que ya tienes en TiqueteraApp (necesitas un getter si es private)
-                        // O creamos una instancia rápida aquí si no quieres modificar TiqueteraApp:
-                        new persistencia.UsuarioDAO().actualizarSaldo(usuario);
-                        
-                        // Actualizar Vista
-                        lblSaldo.setText("Saldo Disponible: $" + nuevoSaldo);
-                        JOptionPane.showMessageDialog(this, "¡Recarga exitosa!");
-                    } catch (Exception ex) {
-                        JOptionPane.showMessageDialog(this, "Error guardando en BD: " + ex.getMessage());
-                    }
+                    nucleo.getUsuarioDAO().actualizarSaldo(usuario);
+                    
+                    // Actualizar Vista
+                    lblSaldo.setText("Saldo Disponible: $" + String.format("%,.0f", nuevoSaldo));
+                    JOptionPane.showMessageDialog(this, "¡Recarga exitosa!");
                 }
-            } catch (NumberFormatException e) {
-                JOptionPane.showMessageDialog(this, "Monto inválido.");
+            } catch (Exception e) {
+                JOptionPane.showMessageDialog(this, "Error: " + e.getMessage());
             }
         }
     }
@@ -148,37 +152,81 @@ public class VentanaComprador extends JFrame {
             return;
         }
 
-        // Crear lista de opciones para el usuario
         String[] opciones = new String[misTiquetes.size()];
         for (int i = 0; i < misTiquetes.size(); i++) {
             Tiquete t = misTiquetes.get(i);
-            String estado = t.isImpreso() ? "[YA IMPRESO]" : "[DISPONIBLE]";
-            // Asumimos que getEvento() no es nulo (si es paquete, ajusta el texto)
-            String nombreEvento = (t.getEvento() != null) ? t.getEvento().getNombre() : "Paquete Múltiple";
-            opciones[i] = t.getIdTiquete() + " - " + nombreEvento + " " + estado;
+            String estado = t.isImpreso() ? "[IMPRESO - VER QR]" : "[DISPONIBLE]";
+            String nombreEvt = (t.getEvento() != null) ? t.getEvento().getNombre() : "Paquete";
+            opciones[i] = t.getIdTiquete() + " - " + nombreEvt + " " + estado;
         }
 
-        // Mostrar selector
-        String seleccion = (String) JOptionPane.showInputDialog(
-            this,
-            "Selecciona el tiquete que quieres ver o imprimir:",
-            "Mis Tiquetes",
-            JOptionPane.QUESTION_MESSAGE,
-            null,
-            opciones,
-            opciones[0]
-        );
+        String seleccion = (String) JOptionPane.showInputDialog(this, "Selecciona tiquete:", "Mis Tiquetes",
+                JOptionPane.QUESTION_MESSAGE, null, opciones, opciones[0]);
 
         if (seleccion != null) {
-            // Buscar el objeto real basado en la selección
             for (int i = 0; i < opciones.length; i++) {
                 if (opciones[i].equals(seleccion)) {
-                    Tiquete tiqueteSeleccionado = misTiquetes.get(i);
-                    
-                    // ABRIR LA VENTANA DE IMPRESIÓN (La crearemos en el siguiente paso)
-                    new VentanaTiquete(nucleo, tiqueteSeleccionado).setVisible(true);
+                    Tiquete tSel = misTiquetes.get(i);
+                    new VentanaTiquete(nucleo, tSel).setVisible(true);
                     break;
                 }
+            }
+        }
+    }
+
+    // --- NUEVO MÉTODO PARA TRANSFERIR ---
+    private void accionTransferirTiquete() {
+        List<Tiquete> misTiquetes = usuario.getTiquetesComprados();
+        
+        // 1. Filtrar solo los transferibles (No impresos, no vencidos)
+        List<Tiquete> aptos = new ArrayList<>();
+        for (Tiquete t : misTiquetes) {
+            if (!t.isImpreso() && t.isTransferible() && "ACTIVO".equalsIgnoreCase(t.getEstado())) {
+                aptos.add(t);
+            }
+        }
+
+        if (aptos.isEmpty()) {
+            JOptionPane.showMessageDialog(this, "No tienes tiquetes aptos para transferir.\n(Recuerda: No puedes transferir si ya lo imprimiste).");
+            return;
+        }
+
+        // 2. Selector visual
+        String[] opciones = new String[aptos.size()];
+        for (int i = 0; i < aptos.size(); i++) {
+            String nombreEvt = (aptos.get(i).getEvento() != null) ? aptos.get(i).getEvento().getNombre() : "Paquete";
+            opciones[i] = aptos.get(i).getIdTiquete() + " - " + nombreEvt;
+        }
+
+        String seleccion = (String) JOptionPane.showInputDialog(this, 
+                "Elige el tiquete a regalar:", "Transferir Tiquete", 
+                JOptionPane.QUESTION_MESSAGE, null, opciones, opciones[0]);
+
+        if (seleccion != null) {
+            Tiquete aTransferir = null;
+            for (int i = 0; i < opciones.length; i++) {
+                if (opciones[i].equals(seleccion)) aTransferir = aptos.get(i);
+            }
+
+            // 3. Pedir Destinatario y Password
+            String destino = JOptionPane.showInputDialog("Ingresa el usuario (Login) de tu amigo:");
+            if (destino == null || destino.isEmpty()) return;
+
+            String pass = JOptionPane.showInputDialog("Confirma con TU contraseña por seguridad:");
+            if (pass == null) return;
+
+            try {
+                // 4. Ejecutar Lógica
+                // Usamos el método transferirTiquete del usuario (asumiendo que sigue la misma lógica que Organizador)
+                usuario.transferirTiquete(aTransferir, pass, destino, nucleo.getUsuarios());
+
+                // 5. Actualizar BD (Cambiar dueño)
+                nucleo.getTiqueteDAO().actualizarClienteTiquete(aTransferir);
+                
+                JOptionPane.showMessageDialog(this, "¡Tiquete enviado exitosamente a " + destino + "!");
+
+            } catch (Exception e) {
+                JOptionPane.showMessageDialog(this, "Error en transferencia: " + e.getMessage(), "Fallo", JOptionPane.ERROR_MESSAGE);
             }
         }
     }

@@ -69,7 +69,7 @@ public class VentanaMarketplace extends JFrame {
         btnComprar.setBackground(new Color(0, 100, 0)); // Verde
         btnComprar.setForeground(Color.BLACK);
         btnVender.setBackground(new Color(0, 0, 150)); // Azul
-        btnVender.setForeground(Color.WHITE);
+        btnVender.setForeground(Color.BLACK);
 
         // Acciones
         btnActualizar.addActionListener(e -> cargarOfertas());

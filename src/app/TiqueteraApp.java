@@ -1406,7 +1406,220 @@ public class TiqueteraApp {
         return this.usuarios;
     }
     
+    public Usuario autenticarUsuario(String login, String password) {
+        // Buscamos en la lista cargada en memoria
+        Usuario u = buscarUsuarioPorLogin(login);
+        
+        // Si existe y la contraseña coincide
+        if (u != null && u.getContrasena().equals(password)) {
+            this.usuarioActual = u; // Guardamos la sesión
+            return u;
+        }
+        return null; // Login fallido
+    }
+
+    /**
+     * Registra un nuevo comprador desde la VentanaRegistro.
+     */
+    public boolean registrarNuevoComprador(String login, String password) {
+        // 1. Validar si ya existe
+        if (buscarUsuarioPorLogin(login) != null) {
+            return false; // Ya existe, no se puede crear
+        }
+
+        try {
+            // 2. Crear objeto (Saldo inicial 0.0)
+            UsuarioComprador nuevo = new UsuarioComprador(login, password, 0.0);
+            
+            // 3. Guardar en Base de Datos (Importante: try-catch por si falla SQL)
+            this.usuarioDAO.guardarUsuario(nuevo);
+            
+            // 4. Agregar a la lista en memoria (para que pueda loguearse ya mismo)
+            this.usuarios.add(nuevo);
+            
+            return true; // ¡Éxito!
+        } catch (Exception e) {
+            System.err.println("Error registrando usuario: " + e.getMessage());
+            return false;
+        }
+    }
+
+   
+    /**
+     * Registra un nuevo ORGANIZADOR.
+     */
+    public boolean registrarOrganizador(String login, String password) {
+        if (buscarUsuarioPorLogin(login) != null) {
+            return false; // Ya existe
+        }
+
+        try {
+            // Creamos un Organizador (Saldo 0.0)
+            cliente.OrganizadorEventos nuevo = new cliente.OrganizadorEventos(login, password, 0.0);
+            
+            // Guardamos en BD y Memoria
+            this.usuarioDAO.guardarUsuario(nuevo);
+            this.usuarios.add(nuevo);
+            
+            return true;
+        } catch (Exception e) {
+            System.err.println("Error registrando organizador: " + e.getMessage());
+            return false;
+        }
+    }
+    
+    /**
+     * Registra un nuevo ADMINISTRADOR.
+     */
+    public boolean registrarAdministrador(String login, String password) {
+        if (buscarUsuarioPorLogin(login) != null) {
+            return false; // Ya existe
+        }
+
+        try {
+            // Crear Admin
+            cliente.Administrador nuevo = new cliente.Administrador(login, password);
+            nuevo.setSaldo(0.0);
+            nuevo.fijarCobroPorEmision(5000); // Valor por defecto
+            
+            // Guardar
+            this.usuarioDAO.guardarUsuario(nuevo);
+            this.usuarios.add(nuevo);
+            
+            return true;
+        } catch (Exception e) {
+            System.err.println("Error registrando admin: " + e.getMessage());
+            return false;
+        }
+    }
+    
+    /**
+     * Guarda una nueva localidad en la BD y crea el objeto correcto (Numerada/NoNumerada).
+     */
+    public void agregarLocalidadAEvento(eventos.Evento evento, String nombre, double precio, int capacidad, boolean esNumerada) {
+        // 1. Guardar en BD (Tabla Localidades)
+        String sql = "INSERT INTO Localidades (nombre, precio, capacidad_max, tickets_vendidos, id_evento) VALUES (?, ?, ?, 0, ?)";
+        
+        try (java.sql.Connection conn = persistencia.ConexionSQLite.conectar();
+             java.sql.PreparedStatement pstmt = conn.prepareStatement(sql, java.sql.Statement.RETURN_GENERATED_KEYS)) {
+            
+            pstmt.setString(1, nombre);
+            pstmt.setDouble(2, precio);
+            pstmt.setInt(3, capacidad);
+            pstmt.setString(4, evento.getId());
+            
+            pstmt.executeUpdate();
+            
+            // 2. Obtener el ID generado y crear el objeto en memoria
+            try (java.sql.ResultSet rs = pstmt.getGeneratedKeys()) {
+                if (rs.next()) {
+                    int idGenerado = rs.getInt(1);
+                    localidades.Localidades nuevaLoc;
+
+                    if (esNumerada) {
+                        // --- CASO NUMERADA ---
+                        // Tu constructor pide un Mapa<String, Boolean>. Vamos a crearlo lleno de 'false' (libre).
+                        java.util.Map<String, Boolean> asientosIniciales = new java.util.HashMap<>();
+                        for (int i = 1; i <= capacidad; i++) {
+                            asientosIniciales.put("Silla-" + i, false); 
+                        }
+                        
+                        // Usamos TU constructor de Numerada
+                        nuevaLoc = new localidades.Numerada(precio, capacidad, nombre, evento, asientosIniciales);
+                        
+                    } else {
+                        // --- CASO NO NUMERADA ---
+                        // Usamos TU constructor de NoNumerada
+                        nuevaLoc = new localidades.NoNumerada(precio, capacidad, nombre, evento);
+                    }
+
+                    // 3. Configurar ID y agregar al evento
+                    // IMPORTANTE: Asegúrate de que la clase padre Localidades tenga setIdLocalidad
+                    // Si no lo tiene, tendrás que agregarlo o castear, pero idealmente debe estar en el padre.
+                    if (nuevaLoc instanceof localidades.Localidades) {
+                         // Como Localidades es abstracta, asumimos que tiene el setter.
+                         // Si te da error aquí, ve a Localidades.java y agrega: public void setIdLocalidad(int id) { this.id_localidad = id; }
+                         try {
+                             // Intento reflexivo o directo si tienes el método público
+                             nuevaLoc.getClass().getMethod("setIdLocalidad", int.class).invoke(nuevaLoc, idGenerado);
+                         } catch (Exception ex) {
+                             // Si no existe el método, lo imprimimos (pero no rompe el flujo crítico)
+                             System.out.println("Nota: No se pudo setear el ID en memoria (falta setter en Localidades)");
+                         }
+                    }
+                    
+                    evento.agregarLocalidad(nuevaLoc);
+                    
+                    System.out.println(">> Localidad " + (esNumerada ? "Numerada" : "NoNumerada") + " creada exitosamente.");
+                }
+            }
+        } catch (Exception e) {
+            System.err.println("Error guardando localidad: " + e.getMessage());
+            e.printStackTrace();
+        }
+    }
+    
+ // =======================================================
+    //   MÉTODOS PARA GUARDAR EN BASE DE DATOS DESDE LA GUI
+    // =======================================================
+
+    public void registrarNuevoVenue(eventos.Venue v) {
+        try {
+            // 1. Guardar en el Disco (Base de Datos)
+            this.venueDAO.guardarVenue(v);
+            
+            // 2. Guardar en Memoria (Para verlo ya mismo en la lista)
+            this.venues.add(v);
+            System.out.println("Venue guardado y sincronizado.");
+        } catch (Exception e) {
+            System.err.println("Error guardando Venue en BD: " + e.getMessage());
+            e.printStackTrace();
+        }
+    }
+
+    public void registrarNuevoEvento(eventos.Evento e) {
+        try {
+            // 1. Guardar en Base de Datos
+            this.eventoDAO.guardarEvento(e);
+            
+            // 2. Guardar en Memoria (Lista global del sistema)
+            this.eventos.add(e);
+            
+            System.out.println("Evento '" + e.getNombre() + "' registrado correctamente.");
+        } catch (Exception ex) {
+            System.err.println("Error guardando Evento: " + ex.getMessage());
+            ex.printStackTrace();
+        }
+    }
+    
+// --- GETTERS PARA LOS DAOs (Necesarios para las ventanas) ---
+    
+    public persistencia.VenueDAO getVenueDAO() {
+        return this.venueDAO;
+    }
+    
+ // --- MÉTODO PARA GUARDAR CORTESÍAS (O COMPRAS) ---
+    public void registrarCortesias(java.util.List<tiquetes.Tiquete> nuevasCortesias) {
+        try {
+            for (tiquetes.Tiquete t : nuevasCortesias) {
+                // 1. Guardar en BD
+                this.tiqueteDAO.guardarTiquete(t);
+                
+                // 2. Guardar en Memoria Global
+                this.tiquetesVendidos.add(t);
+            }
+            System.out.println(">> Se registraron " + nuevasCortesias.size() + " cortesías en el sistema.");
+        } catch (Exception e) {
+            System.err.println("Error guardando cortesías: " + e.getMessage());
+            e.printStackTrace();
+        }
+    }
+    
+ 
+
+    
 }
+
 
 
 

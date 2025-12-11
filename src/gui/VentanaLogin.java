@@ -2,54 +2,44 @@ package gui;
 
 import javax.swing.*;
 import java.awt.*;
-import java.awt.event.ActionEvent;
-import java.awt.event.ActionListener;
 import app.TiqueteraApp;
 import cliente.*;
 
-public class VentanaLogin extends JFrame{
-	
-	private TiqueteraApp nucleo;
-	private JTextField txtUsuario;
-	private JPasswordField txtPassword;
-	private JButton btnIngresar;
-	
-	public VentanaLogin (TiqueteraApp nucleo) {
-		
-		this.nucleo = nucleo;
-		configurarVentana();
-		iniciarComponentes();
+public class VentanaLogin extends JFrame {
 
-	}
-	
-	public void configurarVentana () {
-		
-		setTitle("Login - TICKETGOD");
-        setSize(400, 250);
+    private TiqueteraApp nucleo;
+    private JTextField txtUsuario;
+    private JPasswordField txtPassword;
+
+    public VentanaLogin(TiqueteraApp nucleo) {
+        this.nucleo = nucleo;
+        configurarVentana();
+        iniciarComponentes();
+    }
+
+    private void configurarVentana() {
+        setTitle("Login - TICKETGOD");
+        setSize(400, 320); // Un poco más alto para que quepa el botón nuevo
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
-        setLocationRelativeTo(null); // Centrar en pantalla
-        setLayout(new GridBagLayout()); 
-        setResizable(false);
-	}
-	
-	public void iniciarComponentes() {
-		
-		GridBagConstraints gbc = new GridBagConstraints();
+        setLocationRelativeTo(null);
+        setLayout(new GridBagLayout());
+    }
+
+    private void iniciarComponentes() {
+        GridBagConstraints gbc = new GridBagConstraints();
         gbc.insets = new Insets(10, 10, 10, 10);
         gbc.fill = GridBagConstraints.HORIZONTAL;
 
         // Título
         JLabel lblTitulo = new JLabel("Bienvenido a TICKETGOD");
-        lblTitulo.setFont(new Font("Arial", Font.BOLD, 16));
+        lblTitulo.setFont(new Font("Arial", Font.BOLD, 18));
         lblTitulo.setHorizontalAlignment(SwingConstants.CENTER);
         gbc.gridx = 0; gbc.gridy = 0; gbc.gridwidth = 2;
         add(lblTitulo, gbc);
 
         // Usuario
-        gbc.gridwidth = 1;
-        gbc.gridy = 1; gbc.gridx = 0;
+        gbc.gridwidth = 1; gbc.gridy = 1; gbc.gridx = 0;
         add(new JLabel("Usuario:"), gbc);
-
         txtUsuario = new JTextField(15);
         gbc.gridx = 1;
         add(txtUsuario, gbc);
@@ -57,71 +47,53 @@ public class VentanaLogin extends JFrame{
         // Password
         gbc.gridy = 2; gbc.gridx = 0;
         add(new JLabel("Contraseña:"), gbc);
-
         txtPassword = new JPasswordField(15);
         gbc.gridx = 1;
         add(txtPassword, gbc);
 
-        // Botón
-        btnIngresar = new JButton("Iniciar Sesión");
-        //btnIngresar.setBackground(new Color(50, 150, 250)); // Azulito
-        //btnIngresar.setForeground(Color.WHITE);
+        // Botón INGRESAR
+        JButton btnIngresar = new JButton("Iniciar Sesión");
         gbc.gridy = 3; gbc.gridx = 0; gbc.gridwidth = 2;
         add(btnIngresar, gbc);
 
-        // Acción del botón
-        btnIngresar.addActionListener(new ActionListener() {
-            @Override
-            public void actionPerformed(ActionEvent e) {
-                procesarLogin();
-            }
+        // --- AQUÍ ESTÁ EL BOTÓN NUEVO ---
+        JButton btnRegistro = new JButton("¿No tienes cuenta? Regístrate aquí");
+        btnRegistro.setForeground(Color.BLUE);
+        btnRegistro.setBorderPainted(false);
+        btnRegistro.setContentAreaFilled(false);
+        gbc.gridy = 4; // Fila siguiente
+        add(btnRegistro, gbc);
+
+        // ACCIONES
+        btnIngresar.addActionListener(e -> procesarLogin());
+        
+        btnRegistro.addActionListener(e -> {
+            // Abrir la ventana de registro
+            new VentanaRegistro(nucleo).setVisible(true);
         });
     }
-	
-	private void procesarLogin () {
-		
-		String login = txtUsuario.getText();
-		String password = new String (txtPassword.getPassword());
-		
-		Usuario usuario = nucleo.AutenticarUsuario(login, password);
-		
-		if (usuario != null) {
-			// Login Exitoso
-            this.dispose(); // Cierra esta ventana
-            abrirDashboard(usuario); // Abre la siguiente
+
+    private void procesarLogin() {
+        String login = txtUsuario.getText();
+        String password = new String(txtPassword.getPassword());
+
+        Usuario usuario = nucleo.autenticarUsuario(login, password);
+
+        if (usuario != null) {
+            this.dispose(); 
+            abrirDashboard(usuario);
         } else {
-            // Login Fallido
             JOptionPane.showMessageDialog(this, "Usuario o contraseña incorrectos", "Error", JOptionPane.ERROR_MESSAGE);
         }
     }
-	
-	private void abrirDashboard(Usuario u) {
-        // 1. Cerrar la ventana de Login actual
-        this.dispose(); 
 
-        // 2. Verificar el rol y abrir la ventana correspondiente
+    private void abrirDashboard(Usuario u) {
         if (u instanceof UsuarioComprador) {
-            // Hacemos el "cast" (convertir Usuario genérico a UsuarioComprador)
-            UsuarioComprador comprador = (UsuarioComprador) u;
-            
-            // Creamos y mostramos la nueva ventana
-            VentanaComprador dashboard = new VentanaComprador(nucleo, comprador);
-            dashboard.setVisible(true);
-            
+            new VentanaComprador(nucleo, (UsuarioComprador) u).setVisible(true);
         } else if (u instanceof Administrador) {
-        	
-        	new VentanaAdmin(nucleo, (Administrador) u).setVisible(true);
-            
-            
+            new VentanaAdmin(nucleo, (Administrador) u).setVisible(true);
         } else if (u instanceof OrganizadorEventos) {
-            JOptionPane.showMessageDialog(null, "Panel de ORGANIZADOR en construcción");
             new VentanaOrganizador(nucleo, (OrganizadorEventos) u).setVisible(true);
+        }
     }
-	
-	
-	
-	}
-	
 }
-
-

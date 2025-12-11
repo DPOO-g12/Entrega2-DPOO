@@ -5,9 +5,11 @@ import java.awt.*;
 import java.util.List;
 import java.util.ArrayList;
 import java.util.Map;
+import java.util.HashMap;
 
 import app.TiqueteraApp;
 import cliente.Administrador;
+import cliente.Usuario; 
 import eventos.Evento;
 import eventos.Venue;
 import tiquetes.Tiquete;
@@ -20,14 +22,13 @@ public class VentanaAdmin extends JFrame {
     public VentanaAdmin(TiqueteraApp nucleo, Administrador admin) {
         this.nucleo = nucleo;
         this.admin = admin;
-        
         configurarVentana();
         iniciarComponentes();
     }
 
     private void configurarVentana() {
         setTitle("Panel ADMINISTRADOR - TICKETGOD");
-        setSize(600, 500);
+        setSize(550, 550);
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         setLocationRelativeTo(null);
         setLayout(new BorderLayout());
@@ -35,180 +36,154 @@ public class VentanaAdmin extends JFrame {
 
     private void iniciarComponentes() {
         // --- HEADER ---
-        JPanel panelHeader = new JPanel();
-        panelHeader.setBackground(new Color(50, 50, 50)); // Gris oscuro
-        JLabel lblTitulo = new JLabel("MODO ADMINISTRADOR");
-        lblTitulo.setForeground(Color.WHITE);
+        JPanel panelHeader = new JPanel(new GridLayout(2, 1));
+        panelHeader.setBackground(new Color(230, 230, 250)); 
+        panelHeader.setBorder(BorderFactory.createEmptyBorder(15, 15, 15, 15));
+        
+        JLabel lblTitulo = new JLabel("Panel de Control");
         lblTitulo.setFont(new Font("Arial", Font.BOLD, 20));
+        lblTitulo.setHorizontalAlignment(SwingConstants.CENTER);
+        
+        JLabel lblSub = new JLabel("Administrador: " + admin.getLogIn());
+        lblSub.setHorizontalAlignment(SwingConstants.CENTER);
+        
         panelHeader.add(lblTitulo);
+        panelHeader.add(lblSub);
         add(panelHeader, BorderLayout.NORTH);
 
         // --- BOTONES ---
-        JPanel panelBotones = new JPanel(new GridLayout(4, 1, 20, 20));
-        panelBotones.setBorder(BorderFactory.createEmptyBorder(40, 80, 40, 80));
+        JPanel panelBotones = new JPanel(new GridLayout(5, 1, 15, 15));
+        panelBotones.setBorder(BorderFactory.createEmptyBorder(20, 80, 20, 80));
 
-        JButton btnAprobarVenues = new JButton("1. Aprobar Venues Pendientes");
-        JButton btnVerLogs = new JButton("2. Ver Log Auditoría Marketplace");
-        JButton btnCancelarEvento = new JButton("3. Cancelar Evento (Emergencia)");
-        JButton btnReporte = new JButton("4. Ver Reporte Financiero");
+        JButton btnGestionarVenues = new JButton("1. Aprobar/Rechazar Venues");
+        JButton btnCrearVenue = new JButton("2. Crear Venue Oficial (Directo)"); 
+        JButton btnVerUsuarios = new JButton("3. Ver Usuarios Registrados");
+        JButton btnVerLog = new JButton("4. Ver Log Marketplace"); 
+        JButton btnEstadisticas = new JButton("5. Estadísticas Financieras"); // <--- AHORA SÍ FUNCIONARÁ
 
-        // ACCIONES
-        btnAprobarVenues.addActionListener(e -> accionAprobarVenue());
-        btnVerLogs.addActionListener(e -> accionVerLogs());
-        btnCancelarEvento.addActionListener(e -> accionCancelarEvento());
-        btnReporte.addActionListener(e -> accionVerReporte());
+        btnCrearVenue.setForeground(new Color(0, 0, 150)); 
 
-        panelBotones.add(btnAprobarVenues);
-        panelBotones.add(btnVerLogs);
-        panelBotones.add(btnCancelarEvento);
-        panelBotones.add(btnReporte);
+        btnGestionarVenues.addActionListener(e -> accionGestionarVenues());
+        btnCrearVenue.addActionListener(e -> accionCrearVenueDirecto()); 
+        btnVerUsuarios.addActionListener(e -> accionVerUsuarios());
+        btnVerLog.addActionListener(e -> accionVerLogMarketplace()); 
+        btnEstadisticas.addActionListener(e -> accionReporteGlobal()); // <--- Llama al método real
+
+        panelBotones.add(btnGestionarVenues);
+        panelBotones.add(btnCrearVenue);
+        panelBotones.add(btnVerUsuarios);
+        panelBotones.add(btnVerLog);
+        panelBotones.add(btnEstadisticas);
 
         add(panelBotones, BorderLayout.CENTER);
 
         // --- FOOTER ---
+        JPanel panelFooter = new JPanel();
         JButton btnLogout = new JButton("Cerrar Sesión");
         btnLogout.setForeground(Color.RED);
         btnLogout.addActionListener(e -> {
             this.dispose();
             new VentanaLogin(nucleo).setVisible(true);
         });
-        add(btnLogout, BorderLayout.SOUTH);
+        panelFooter.add(btnLogout);
+        add(panelFooter, BorderLayout.SOUTH);
     }
 
-    // --- LÓGICA DE LOS BOTONES ---
+    // =======================================================
+    //                 LÓGICA DE LOS BOTONES
+    // =======================================================
 
-    private void accionAprobarVenue() {
-        // 1. Filtrar pendientes
+    // ... (Mantén tus métodos de Venues, Usuarios y Log igual que antes) ...
+    // ... Copia aquí accionGestionarVenues, accionCrearVenueDirecto, etc. ...
+    
+    // --- PÉGALOS AQUÍ SI TE FALTAN, SI NO, SOLO AGREGA EL DE ABAJO ---
+    
+    private void accionGestionarVenues() {
         List<Venue> pendientes = new ArrayList<>();
         for (Venue v : nucleo.getVenues()) {
-            if ("PENDIENTE".equalsIgnoreCase(v.getEstado())) {
-                pendientes.add(v);
-            }
+            if ("PENDIENTE".equalsIgnoreCase(v.getEstado())) pendientes.add(v);
         }
-
         if (pendientes.isEmpty()) {
-            JOptionPane.showMessageDialog(this, "No hay venues pendientes de aprobación.");
+            JOptionPane.showMessageDialog(this, "No hay solicitudes pendientes.");
             return;
         }
-
-        // 2. Mostrar selector
         String[] opciones = new String[pendientes.size()];
-        for (int i = 0; i < pendientes.size(); i++) {
-            opciones[i] = pendientes.get(i).getUbicacion() + " (" + pendientes.get(i).getTipo() + ")";
-        }
-
-        String seleccion = (String) JOptionPane.showInputDialog(this, "Selecciona Venue a aprobar:", 
-                "Aprobar Venue", JOptionPane.QUESTION_MESSAGE, null, opciones, opciones[0]);
-
-        if (seleccion != null) {
-            // Buscar objeto
-            for (int i = 0; i < opciones.length; i++) {
-                if (opciones[i].equals(seleccion)) {
-                    Venue v = pendientes.get(i);
-                    try {
-                        // Lógica
-                        admin.aprobarVenue(v);
-                        // Persistencia (Asumiendo que tienes este método en VenueDAO, o usamos guardarVenue si hace update)
-                        // Si no tienes actualizar, puedes usar guardarVenue si el ID es el mismo
-                        // nucleo.getVenueDAO().actualizarEstadoVenue(v); <--- SI TIENES ESTE METODO
-                        // Si no lo tienes, muéstralo solo en memoria o agrégalo al DAO
-                        JOptionPane.showMessageDialog(this, "¡Venue Aprobado! Ahora los organizadores pueden usarlo.");
-                    } catch (Exception ex) {
-                        JOptionPane.showMessageDialog(this, "Error: " + ex.getMessage());
-                    }
-                    break;
-                }
-            }
+        for (int i = 0; i < pendientes.size(); i++) opciones[i] = pendientes.get(i).getUbicacion();
+        String sel = (String) JOptionPane.showInputDialog(this, "Evaluar Venue:", "Venues", JOptionPane.QUESTION_MESSAGE, null, opciones, opciones[0]);
+        if (sel != null) {
+            Venue vSel = null;
+            for(Venue v : pendientes) if(v.getUbicacion().equals(sel)) vSel = v;
+            int opt = JOptionPane.showOptionDialog(this, "¿Aprobar " + sel + "?", "Evaluar", JOptionPane.YES_NO_OPTION, JOptionPane.QUESTION_MESSAGE, null, new String[]{"APROBAR", "RECHAZAR"}, "APROBAR");
+            try {
+                if (opt == 0) { vSel.setEstado("APROBADO"); nucleo.getVenueDAO().actualizarEstadoVenue(vSel); }
+                else if (opt == 1) { vSel.setEstado("RECHAZADO"); nucleo.getVenueDAO().actualizarEstadoVenue(vSel); }
+            } catch(Exception e) { JOptionPane.showMessageDialog(this, "Error BD: " + e.getMessage()); }
         }
     }
-
-    private void accionVerLogs() {
+    
+    private void accionCrearVenueDirecto() {
+         // (Tu código de crear venue directo que ya tenías)
+         // ...
+         // Si necesitas que te lo pase de nuevo avísame, pero ya lo tenías bien.
+    }
+    
+    private void accionVerUsuarios() {
+        StringBuilder sb = new StringBuilder("=== USUARIOS ===\n");
+        for(Usuario u : nucleo.getUsuarios()) sb.append(u.getLogIn()).append(" (").append(u.getClass().getSimpleName()).append(")\n");
+        JOptionPane.showMessageDialog(this, new JScrollPane(new JTextArea(sb.toString())));
+    }
+    
+    private void accionVerLogMarketplace() {
+        // (Tu código de ver log)
         try {
-            List<String> logs = nucleo.getMarketplace().consultarLog(admin);
-            
-            JTextArea textArea = new JTextArea(15, 50);
-            textArea.setEditable(false);
-            for (String log : logs) {
-                textArea.append(log + "\n");
-            }
-            
-            JScrollPane scroll = new JScrollPane(textArea);
-            JOptionPane.showMessageDialog(this, scroll, "Log de Auditoría", JOptionPane.INFORMATION_MESSAGE);
-            
-        } catch (Exception e) {
-            JOptionPane.showMessageDialog(this, "Error: " + e.getMessage());
-        }
+            List<String> logs = nucleo.getMarketplace().getLogDeRegistros();
+            JOptionPane.showMessageDialog(this, new JScrollPane(new JList<>(logs.toArray())));
+        } catch(Exception e) { JOptionPane.showMessageDialog(this, "Error: " + e.getMessage()); }
     }
 
-    private void accionCancelarEvento() {
-        // Filtrar activos
-        List<Evento> activos = new ArrayList<>();
-        // Necesitamos acceso a los eventos. Si TiqueteraApp no tiene getEventos() publico, añádelo.
-        for (Evento e : nucleo.getEventos()) {
-            if ("ACTIVO".equalsIgnoreCase(e.getEstado())) {
-                activos.add(e);
-            }
-        }
-
-        if (activos.isEmpty()) {
-            JOptionPane.showMessageDialog(this, "No hay eventos activos para cancelar.");
+    /**
+     * ¡AQUÍ ESTÁ LA NUEVA LÓGICA FINANCIERA!
+     */
+    private void accionReporteGlobal() {
+        List<Tiquete> todosLosTiquetes = nucleo.getTiquetesVendidos();
+        
+        if (todosLosTiquetes == null || todosLosTiquetes.isEmpty()) {
+            JOptionPane.showMessageDialog(this, "Aún no hay ventas registradas en el sistema.");
             return;
         }
 
-        // Selector simple
-        String[] nombres = new String[activos.size()];
-        for(int i=0; i<activos.size(); i++) nombres[i] = activos.get(i).getNombre();
+        double totalVentas = 0.0;
+        int cantidadTiquetes = 0;
+        Map<String, Double> ventasPorEvento = new HashMap<>();
 
-        String seleccion = (String) JOptionPane.showInputDialog(this, "SELECCIONA EVENTO A CANCELAR:", 
-                "ZONA DE PELIGRO", JOptionPane.WARNING_MESSAGE, null, nombres, nombres[0]);
+        for (Tiquete t : todosLosTiquetes) {
+            // Ignorar cortesías para la suma financiera real (opcional)
+            if ("CORTESIA".equals(t.getEstado())) continue;
+            if (!"ACTIVO".equals(t.getEstado()) && !"VENCIDO".equals(t.getEstado())) continue;
 
-        if (seleccion != null) {
-            // Confirmación extra
-            int confirm = JOptionPane.showConfirmDialog(this, 
-                    "¿ESTÁS SEGURO?\nEsto reembolsará el dinero a todos los clientes.", 
-                    "Confirmar Cancelación", JOptionPane.YES_NO_OPTION);
-            
-            if (confirm == JOptionPane.YES_OPTION) {
-                // Buscar el evento real
-                Evento eventoSel = null;
-                for(Evento e : activos) if(e.getNombre().equals(seleccion)) eventoSel = e;
-                
-                try {
-                    // Obtener lista de tiquetes vendidos (necesitas un getter en TiqueteraApp para tiquetesVendidos)
-                    // Como TiqueteraApp tiene la lista tiquetesVendidos privada, vamos a asumir que creaste el getter
-                    // public List<Tiquete> getTiquetesVendidos() { return tiquetesVendidos; }
-                    
-                    // Si no tienes el getter, avísame. Por ahora usaré una lista vacía para que no compile error, 
-                    // PERO DEBES AGREGAR EL GETTER EN TIQUETERAAPP.
-                    List<Tiquete> todosLosTiquetes = nucleo.getTiquetesVendidos(); 
-                    
-                    admin.cancelarEvento(eventoSel, todosLosTiquetes, true);
-                    
-                    // Guardar cambios en BD (Evento y Saldos)
-                    // nucleo.getEventoDAO().guardarEvento(eventoSel); // O actualizarEstado
-                    // Loop para guardar saldos de usuarios afectados... (Simplificado para el ejemplo)
-                    
-                    JOptionPane.showMessageDialog(this, "Evento Cancelado y Reembolsos procesados.");
-                } catch (Exception ex) {
-                    JOptionPane.showMessageDialog(this, "Error: " + ex.getMessage());
-                }
-            }
+            double precio = t.getPrecioFinal();
+            totalVentas += precio;
+            cantidadTiquetes++;
+
+            // Agrupar por evento
+            String nombreEvento = (t.getEvento() != null) ? t.getEvento().getNombre() : "Paquete Múltiple";
+            ventasPorEvento.put(nombreEvento, ventasPorEvento.getOrDefault(nombreEvento, 0.0) + precio);
         }
-    }
 
-    private void accionVerReporte() {
-        // Necesitamos lista de tiquetes y eventos
-        Map<String, Double> reporte = admin.calcularGanancias(nucleo.getTiquetesVendidos(), nucleo.getEventos());
-        
         StringBuilder sb = new StringBuilder();
-        sb.append("--- REPORTE FINANCIERO ---\n\n");
-        for (Map.Entry<String, Double> entry : reporte.entrySet()) {
-            sb.append(entry.getKey()).append(": $").append(String.format("%,.2f", entry.getValue())).append("\n");
-        }
+        sb.append("=== REPORTE FINANCIERO GLOBAL ===\n\n");
+        sb.append("Total Tiquetes Vendidos: ").append(cantidadTiquetes).append("\n");
+        sb.append("DINERO TOTAL RECAUDADO: $").append(String.format("%,.2f", totalVentas)).append("\n");
+        sb.append("---------------------------------\n");
+        sb.append("Desglose por Evento:\n");
         
-        JTextArea textArea = new JTextArea(15, 40);
-        textArea.setText(sb.toString());
-        textArea.setEditable(false);
-        JOptionPane.showMessageDialog(this, new JScrollPane(textArea), "Finanzas", JOptionPane.INFORMATION_MESSAGE);
+        for (Map.Entry<String, Double> entry : ventasPorEvento.entrySet()) {
+            sb.append("- ").append(entry.getKey()).append(": $").append(String.format("%,.2f", entry.getValue())).append("\n");
+        }
+
+        JTextArea area = new JTextArea(20, 40);
+        area.setText(sb.toString());
+        area.setEditable(false);
+        JOptionPane.showMessageDialog(this, new JScrollPane(area), "Estadísticas TICKETGOD", JOptionPane.INFORMATION_MESSAGE);
     }
 }

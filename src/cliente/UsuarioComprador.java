@@ -28,6 +28,12 @@ public class UsuarioComprador extends Usuario {
 	public List<Tiquete> getTiquetesComprados() {
 		return tiquetesComprados;
 	}
+	
+	public void agregarTiquete (Tiquete t) {
+		
+		tiquetesComprados.add(t);
+		
+	}
 
 
 	@Override

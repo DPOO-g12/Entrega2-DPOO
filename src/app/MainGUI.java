@@ -1,25 +1,26 @@
-package app;
+package app; // (Asegúrate que diga package app;)
 
 import gui.VentanaLogin;
+import persistencia.InicializadorBD; // <--- IMPORTAR ESTO
 
 public class MainGUI {
-	
-	public static void main (String [] args ) {
-		
-		System.out.println("Iniciando interfaz gráfica...");
+
+    public static void main(String[] args) {
+        System.out.println("Iniciando interfaz gráfica...");
         
-        // 1. Inicializar el núcleo (Carga BD, crea Marketplace, etc.)
+        // ---------------------------------------------------------
+        // 1. ¡¡CREAR TABLAS SI NO EXISTEN!! (SALVAVIDAS)
+        // ---------------------------------------------------------
+        InicializadorBD.crearTablas(); 
+
+        // 2. Inicializar el núcleo (Carga BD, etc.)
         TiqueteraApp nucleo = new TiqueteraApp();
         nucleo.cargarDatosDesdeBD(); 
 
-        // 2. Arrancar la ventana
+        // 3. Arrancar la ventana
         java.awt.EventQueue.invokeLater(() -> {
             VentanaLogin login = new VentanaLogin(nucleo);
             login.setVisible(true);
         });
     }
-		
-		
-	
-
 }

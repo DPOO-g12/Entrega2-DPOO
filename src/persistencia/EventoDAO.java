@@ -17,28 +17,37 @@ import java.util.List;
  */
 public class EventoDAO {
 
-    public void guardarEvento(Evento evento) throws SQLException {
-        // El SQL para insertar en la tabla Evento
+	public void guardarEvento(Evento evento) throws SQLException {
+        // SQL corregido para incluir login_organizador
         String sql = "INSERT INTO Evento (id_evento, nombre, fecha, estado, id_venue, login_organizador) VALUES (?, ?, ?, ?, ?, ?)";
         
         try (Connection conn = ConexionSQLite.conectar();
              PreparedStatement pstmt = conn.prepareStatement(sql)) {
 
-            // Asignamos los valores a los '?'
             pstmt.setString(1, evento.getId());
             pstmt.setString(2, evento.getNombre());
             pstmt.setString(3, evento.getFecha());
             pstmt.setString(4, evento.getEstado());
             
-            // Gracias al refactor, ahora podemos obtener el ID del Venue
-            pstmt.setInt(5, evento.getVenue().getIdVenue()); 
-            // Y el login del promotor
-            pstmt.setString(6, evento.getPromotor().getLogIn());
+            // Validación de Venue
+            if (evento.getVenue() != null) {
+                pstmt.setInt(5, evento.getVenue().getIdVenue()); 
+            } else {
+                pstmt.setNull(5, java.sql.Types.INTEGER);
+            }
+
+            // Validación de Promotor (Organizador) - ¡ESTO ES LO NUEVO!
+            if (evento.getPromotor() != null) {
+                pstmt.setString(6, evento.getPromotor().getLogIn());
+            } else {
+                pstmt.setNull(6, java.sql.Types.VARCHAR);
+            }
 
             pstmt.executeUpdate();
+            System.out.println("Evento '" + evento.getNombre() + "' guardado correctamente.");
 
         } catch (SQLException e) {
-             if (e.getMessage().contains("UNIQUE constraint failed: Evento.id_evento")) {
+             if (e.getMessage().contains("UNIQUE constraint failed")) {
                 throw new SQLException("Error: Ya existe un evento con el ID '" + evento.getId() + "'.");
             }
             throw e;

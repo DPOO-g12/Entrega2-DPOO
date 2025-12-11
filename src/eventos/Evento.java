@@ -93,7 +93,14 @@ public class Evento {
 		this.estado = estado;
 	}
 	
-	
+	// --- MÉTODO FALTANTE PARA AGREGAR LOCALIDADES ---
+    public void agregarLocalidad(localidades.Localidades localidad) {
+        if (this.localidades == null) {
+            this.localidades = new java.util.HashMap<>();
+        }
+        // Usamos el nombre como llave y el objeto como valor
+        this.localidades.put(localidad.getNombreLocalidad(), localidad);
+    }
 	
 	
 
